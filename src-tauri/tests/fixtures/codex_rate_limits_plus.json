@@ -1,0 +1,25 @@
+{
+  "rateLimits": {
+    "limitId": "codex",
+    "limitName": null,
+    "primary": { "usedPercent": 55, "windowDurationMins": 300, "resetsAt": 1790410000 },
+    "secondary": { "usedPercent": 20, "windowDurationMins": 10080, "resetsAt": 1790950000 },
+    "planType": "plus"
+  },
+  "rateLimitsByLimitId": {
+    "codex_bengalfox": {
+      "limitId": "codex_bengalfox",
+      "limitName": "GPT-5.5-Codex-Max",
+      "primary": { "usedPercent": 12, "windowDurationMins": 300, "resetsAt": 1790400000 },
+      "secondary": { "usedPercent": 40, "windowDurationMins": 10080, "resetsAt": 1790900000 },
+      "planType": "plus"
+    },
+    "codex": {
+      "limitId": "codex",
+      "limitName": null,
+      "primary": { "usedPercent": 55, "windowDurationMins": 300, "resetsAt": 1790410000 },
+      "secondary": { "usedPercent": 20, "windowDurationMins": 10080, "resetsAt": 1790950000 },
+      "planType": "plus"
+    }
+  }
+}
