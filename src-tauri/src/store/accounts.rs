@@ -37,6 +37,7 @@ pub fn new_account(provider: Provider, label: &str, config_dir: PathBuf, use_def
         use_default_dir,
         pinned: existing.is_empty(),
         created_at: Utc::now(),
+        created_by_app: false,
     }
 }
 
@@ -82,11 +83,14 @@ pub fn normalize_config_dir(input: &str, home: &Path) -> Result<PathBuf, String>
     Ok(path)
 }
 
-/// Directories the app may delete: inside home, not home itself, not a CLI default dir.
+/// Directories the app may delete: created by the app, inside home, not home itself, not a
+/// CLI default dir. `created_by_app` is what protects `~/.Claude` on a case-insensitive
+/// filesystem, where the lexical default-dir check cannot see that it is `~/.claude`.
 pub fn can_delete_dir(account: &Account, home: &Path) -> bool {
     let dir = &account.config_dir;
     // A config_dir like `home/.claude-x/../.claude` must never look deletable.
-    !account.use_default_dir
+    account.created_by_app
+        && !account.use_default_dir
         && !has_dot_segment(dir)
         && dir.starts_with(home)
         && dir != home
@@ -149,6 +153,7 @@ mod tests {
     fn default_and_home_dirs_are_protected() {
         let home = PathBuf::from("/home/me");
         let mut a = new_account(Provider::Claude, "Main", home.join(".claude"), false, &[]);
+        a.created_by_app = true;
         assert!(!can_delete_dir(&a, &home));
         a.config_dir = home.join(".codex");
         assert!(!can_delete_dir(&a, &home));
@@ -166,9 +171,30 @@ mod tests {
     fn non_normalized_dirs_are_protected() {
         let home = PathBuf::from("/home/me");
         let mut a = new_account(Provider::Claude, "X", home.join(".claude-x").join("..").join(".claude"), false, &[]);
+        a.created_by_app = true;
         assert!(!can_delete_dir(&a, &home));
         a.config_dir = home.join(".").join(".claude-work");
         assert!(!can_delete_dir(&a, &home));
+    }
+
+    #[test]
+    fn dirs_the_app_did_not_create_are_never_deletable() {
+        let home = PathBuf::from("/home/me");
+        // `~/.Claude` passes every lexical check but is `~/.claude` on a case-insensitive disk.
+        let mut a = new_account(Provider::Claude, "Main", home.join(".Claude"), false, &[]);
+        assert!(!a.created_by_app);
+        assert!(!can_delete_dir(&a, &home));
+        a.config_dir = home.join(".claude-work");
+        assert!(!can_delete_dir(&a, &home));
+        a.created_by_app = true;
+        assert!(can_delete_dir(&a, &home));
+    }
+
+    #[test]
+    fn older_account_files_load_as_not_created_by_app() {
+        let json = r#"{"id":"x","provider":"claude","label":"Main","configDir":"/home/me/.claude-x","useDefaultDir":false,"pinned":true,"aliasName":"claude-main","createdAt":"2026-09-25T00:00:00Z"}"#;
+        let account: Account = serde_json::from_str(json).unwrap();
+        assert!(!account.created_by_app);
     }
 
     #[test]

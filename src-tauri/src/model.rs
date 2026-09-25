@@ -47,6 +47,10 @@ pub struct Account {
     pub pinned: bool,
     pub alias_name: String,
     pub created_at: DateTime<Utc>,
+    /// The app created `config_dir` itself, so it may offer to delete it. Missing in older
+    /// accounts.json files, which therefore load as not deletable.
+    #[serde(default)]
+    pub created_by_app: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

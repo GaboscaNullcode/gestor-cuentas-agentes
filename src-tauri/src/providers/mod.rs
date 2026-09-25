@@ -123,6 +123,7 @@ mod tests {
             pinned: false,
             alias_name: "claude-work".into(),
             created_at: Utc::now(),
+            created_by_app: false,
         }
     }
 

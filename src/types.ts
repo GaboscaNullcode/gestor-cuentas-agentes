@@ -9,6 +9,7 @@ export interface Account {
   pinned: boolean;
   aliasName: string;
   createdAt: string;
+  createdByApp: boolean;
 }
 
 export type WindowKind =

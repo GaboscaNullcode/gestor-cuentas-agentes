@@ -113,13 +113,15 @@ pub async fn add_account(app: AppHandle, provider: Provider, label: String, conf
         return Err("Label is required.".into());
     }
     let dir = normalize_config_dir(&config_dir, &state.paths.home)?;
-    let account = {
+    let mut account = {
         let accounts = state.accounts.lock().unwrap();
         validate_new(provider, &dir, &accounts)?;
         new_account(provider, &label, dir.clone(), false, &accounts)
     };
     let created = !dir.exists();
     std::fs::create_dir_all(&dir).map_err(|e| format!("Could not create {}: {e}", dir.display()))?;
+    // Only a directory the app made may later be offered for deletion.
+    account.created_by_app = created;
     state.accounts.lock().unwrap().push(account.clone());
     accounts_changed(&app);
     if let Err(e) = state.login.start(app.clone(), account.clone(), created.then_some(dir.clone()), true).await {
