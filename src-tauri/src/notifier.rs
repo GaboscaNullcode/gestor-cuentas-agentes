@@ -54,8 +54,12 @@ pub fn diff(
     }
 
     for window in &next.windows {
+        // The dedupe key segment must be stable across fetches even when `resets_at` is
+        // unknown, otherwise a window without a reset time would re-notify on every poll.
+        // The stored value still needs a real timestamp for `UsageCache::prune_sent`.
+        let reset_key_part = window.resets_at.map_or_else(|| "none".to_string(), |r| r.timestamp().to_string());
         let reset_ts = window.resets_at.map_or(now.timestamp(), |r| r.timestamp());
-        let key_base = format!("{account_id}|{}|{reset_ts}", window.kind.key());
+        let key_base = format!("{account_id}|{}|{reset_key_part}", window.kind.key());
 
         if let Some(&top) = thresholds.iter().filter(|t| window.used_pct >= f32::from(**t)).max() {
             let top_key = format!("th|{key_base}|{top}");
@@ -174,5 +178,25 @@ mod tests {
     fn stale_data_does_not_trigger_threshold_notifications() {
         let mut sent = HashMap::new();
         assert!(diff("Work", "a", None, &snap(AccountStatus::Stale, 99.0, 2), &T, &mut sent, now()).is_empty());
+    }
+
+    fn snap_no_reset(status: AccountStatus, pct: f32) -> UsageSnapshot {
+        UsageSnapshot {
+            plan: None,
+            windows: vec![Window { kind: WindowKind::FiveHour, used_pct: pct, resets_at: None }],
+            fetched_at: now(),
+            status,
+            last_error: None,
+        }
+    }
+
+    #[test]
+    fn window_without_reset_time_notifies_once_across_polls() {
+        let mut sent = HashMap::new();
+        let snapshot = snap_no_reset(AccountStatus::Ok, 85.0);
+        let first = diff("Work", "a", None, &snapshot, &T, &mut sent, now());
+        assert_eq!(first.len(), 1);
+        let later = diff("Work", "a", None, &snapshot, &T, &mut sent, now() + Duration::minutes(10));
+        assert!(later.is_empty());
     }
 }
