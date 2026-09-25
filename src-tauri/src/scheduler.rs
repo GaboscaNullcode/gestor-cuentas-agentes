@@ -157,6 +157,7 @@ pub fn start_fetch(app: AppHandle, account: Account) {
         }
         log::info!("fetched {} ({:?}): {:?}", account.label, account.provider, merged.status);
         state.save_cache();
+        crate::tray::refresh(&app);
         let _ = app.emit("usage-updated", UsageUpdated { account_id: account.id.clone(), snapshot: merged });
     });
 }

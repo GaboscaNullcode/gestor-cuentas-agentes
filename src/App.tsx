@@ -1,51 +1,67 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
+import { listen } from "@tauri-apps/api/event";
+import { useCallback, useEffect, useState } from "react";
+import { api } from "./api";
+import { AccountCard } from "./components/AccountCard";
+import { AddAccountView } from "./components/AddAccountView";
+import type { Account, UsageSnapshot, UsageUpdated } from "./types";
 
-function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+type View = { name: "panel" } | { name: "add" };
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
+export default function App() {
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [snapshots, setSnapshots] = useState<Record<string, UsageSnapshot>>({});
+  const [view, setView] = useState<View>({ name: "panel" });
+  const [now, setNow] = useState(new Date());
+  const [error, setError] = useState<string | null>(null);
+
+  const reload = useCallback(async () => {
+    setAccounts(await api.listAccounts());
+    setSnapshots(await api.getSnapshots());
+  }, []);
+
+  useEffect(() => {
+    reload();
+    const timer = setInterval(() => setNow(new Date()), 30_000);
+    const offUsage = listen<UsageUpdated>("usage-updated", (e) =>
+      setSnapshots((s) => ({ ...s, [e.payload.accountId]: e.payload.snapshot })),
+    );
+    const offAccounts = listen("accounts-changed", () => reload());
+    return () => {
+      clearInterval(timer);
+      offUsage.then((off) => off());
+      offAccounts.then((off) => off());
+    };
+  }, [reload]);
+
+  const run = (action: Promise<unknown>) => action.catch((e) => setError(String(e)));
+  const ordered = [...accounts].sort(
+    (a, b) => Number(b.pinned) - Number(a.pinned) || a.createdAt.localeCompare(b.createdAt),
+  );
+
+  if (view.name === "add") return <AddAccountView onDone={() => setView({ name: "panel" })} />;
 
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
-
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
+    <main className="panel">
+      <header className="panel-header">
+        <h1>Usage</h1>
+        <button onClick={() => setView({ name: "add" })}>+ Add account</button>
+      </header>
+      {error && (
+        <p className="error" onClick={() => setError(null)}>
+          {error}
+        </p>
+      )}
+      {ordered.length === 0 && <p className="muted">No accounts yet. Add one to start tracking usage.</p>}
+      {ordered.map((account) => (
+        <AccountCard
+          key={account.id}
+          account={account}
+          snapshot={snapshots[account.id]}
+          now={now}
+          onPin={() => run(api.setPinned(account.id))}
+          onRefresh={() => run(api.refreshAccount(account.id))}
         />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
+      ))}
     </main>
   );
 }
-
-export default App;

@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "usage-monitor",
+  "productName": "Usage Monitor",
   "version": "0.1.0",
   "identifier": "com.gabosca.usagemonitor",
   "build": {
@@ -12,9 +12,15 @@
   "app": {
     "windows": [
       {
-        "title": "usage-monitor",
-        "width": 800,
-        "height": 600
+        "label": "main",
+        "title": "Usage Monitor",
+        "width": 380,
+        "height": 620,
+        "visible": false,
+        "decorations": false,
+        "resizable": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true
       }
     ],
     "security": {

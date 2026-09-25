@@ -1,4 +1,5 @@
 pub mod cli;
+pub mod commands;
 pub mod logging;
 pub mod model;
 pub mod parse;
@@ -6,18 +7,45 @@ pub mod providers;
 pub mod scheduler;
 pub mod state;
 pub mod store;
+pub mod tray;
 
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
+use tauri::{Manager, WindowEvent};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(logging::plugin())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet])
+        .plugin(tauri_plugin_positioner::init())
+        .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
+        .setup(|app| {
+            #[cfg(target_os = "macos")]
+            app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+            let state = state::AppState::load(app.handle())?;
+            app.manage(state);
+            tray::create(app.handle())?;
+            tray::refresh(app.handle());
+            scheduler::schedule_all(app.handle());
+            scheduler::spawn(app.handle().clone());
+            if let Some(window) = app.get_webview_window("main") {
+                let panel = window.clone();
+                window.on_window_event(move |event| {
+                    if let WindowEvent::Focused(false) = event {
+                        let _ = panel.hide();
+                    }
+                });
+            }
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
+            commands::list_accounts,
+            commands::get_snapshots,
+            commands::refresh_account,
+            commands::set_pinned,
+            commands::detect_existing,
+            commands::add_existing,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
