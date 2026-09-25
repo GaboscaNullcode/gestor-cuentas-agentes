@@ -61,6 +61,39 @@ mod tests {
     fn remove_block_leaves_unmarked_content_alone() {
         assert_eq!(remove_block("a\nb\n"), "a\nb\n");
     }
+
+    #[test]
+    fn install_into_preserves_existing_content_and_appends_block() {
+        let dir = tempfile::tempdir().unwrap();
+        let target = dir.path().join("profile");
+        std::fs::write(&target, "export FOO=1\n").unwrap();
+        let block = sh_source_block(Path::new("/cfg/aliases.sh"));
+        install_into(&target, &block).unwrap();
+        let written = std::fs::read_to_string(&target).unwrap();
+        assert!(written.starts_with("export FOO=1\n"));
+        assert!(written.contains(&block));
+    }
+
+    #[test]
+    fn install_into_creates_missing_file_with_just_the_block() {
+        let dir = tempfile::tempdir().unwrap();
+        let target = dir.path().join("profile");
+        let block = sh_source_block(Path::new("/cfg/aliases.sh"));
+        install_into(&target, &block).unwrap();
+        assert_eq!(std::fs::read_to_string(&target).unwrap(), block);
+    }
+
+    #[test]
+    fn install_into_errors_on_unreadable_file_and_leaves_it_unchanged() {
+        let dir = tempfile::tempdir().unwrap();
+        let target = dir.path().join("profile");
+        let original: &[u8] = &[0xff, 0xfe, 0x00];
+        std::fs::write(&target, original).unwrap();
+        let block = sh_source_block(Path::new("/cfg/aliases.sh"));
+        let result = install_into(&target, &block);
+        assert!(result.is_err());
+        assert_eq!(std::fs::read(&target).unwrap(), original);
+    }
 }
 
 use crate::cli::locator::ShellEnv;
@@ -225,6 +258,24 @@ fn powershell_profiles() -> Vec<PathBuf> {
     Vec::new()
 }
 
+/// Reads `path`, treating a missing file as empty content. Any other read error (permissions,
+/// content that isn't valid UTF-8, ...) is propagated instead of being silently swallowed.
+fn read_or_empty(path: &Path) -> io::Result<String> {
+    match fs::read_to_string(path) {
+        Ok(content) => Ok(content),
+        Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(String::new()),
+        Err(e) => Err(e),
+    }
+}
+
+fn install_into(target: &Path, block: &str) -> io::Result<()> {
+    let current = read_or_empty(target)?;
+    if let Some(parent) = target.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    fs::write(target, install_block(&current, block))
+}
+
 pub fn install(paths: &AppPaths, shell: &ShellEnv) -> io::Result<Vec<PathBuf>> {
     let mut done = Vec::new();
     for (target, kind) in profile_targets(paths, shell) {
@@ -232,11 +283,7 @@ pub fn install(paths: &AppPaths, shell: &ShellEnv) -> io::Result<Vec<PathBuf>> {
             ProfileKind::Sh => sh_source_block(&paths.aliases_sh()),
             ProfileKind::Ps1 => ps1_source_block(&paths.aliases_ps1()),
         };
-        let current = fs::read_to_string(&target).unwrap_or_default();
-        if let Some(parent) = target.parent() {
-            fs::create_dir_all(parent)?;
-        }
-        fs::write(&target, install_block(&current, &block))?;
+        install_into(&target, &block)?;
         done.push(target);
     }
     Ok(done)
