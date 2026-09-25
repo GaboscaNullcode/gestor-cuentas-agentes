@@ -4,6 +4,7 @@ pub mod commands;
 pub mod logging;
 pub mod login;
 pub mod model;
+pub mod notifier;
 pub mod parse;
 pub mod providers;
 pub mod scheduler;

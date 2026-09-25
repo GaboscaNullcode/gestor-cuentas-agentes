@@ -173,7 +173,8 @@ pub fn start_fetch(app: AppHandle, account: Account) {
         let ctx = state.cli.lock().unwrap().clone();
         let fresh = providers::fetch_usage(&ctx, &account).await;
         let interval = state.settings.lock().unwrap().interval();
-        let merged = {
+        let thresholds = state.settings.lock().unwrap().thresholds.clone();
+        let (merged, notes) = {
             // Held across the cache and runtime updates (lock order accounts -> cache -> runtime)
             // so an account removed mid-fetch is not resurrected as an orphan entry.
             let accounts = state.accounts.lock().unwrap();
@@ -183,6 +184,9 @@ pub fn start_fetch(app: AppHandle, account: Account) {
             let mut cache = state.cache.lock().unwrap();
             let prev = cache.snapshots.get(&account.id).cloned();
             let merged = merge_result(prev.as_ref(), fresh.clone());
+            let mut sent = std::mem::take(&mut cache.sent);
+            let notes = crate::notifier::diff(&account.label, &account.id, prev.as_ref(), &merged, &thresholds, &mut sent, Utc::now());
+            cache.sent = sent;
             cache.snapshots.insert(account.id.clone(), merged.clone());
             drop(cache);
             let mut runtime = state.runtime.lock().unwrap();
@@ -190,8 +194,14 @@ pub fn start_fetch(app: AppHandle, account: Account) {
             entry.in_flight = false;
             entry.errors = if fresh.status == AccountStatus::Ok { 0 } else { entry.errors + 1 };
             entry.next_due = next_due(Utc::now(), &merged, interval, entry.errors);
-            merged
+            (merged, notes)
         };
+        {
+            use tauri_plugin_notification::NotificationExt;
+            for note in notes {
+                let _ = app.notification().builder().title(&note.title).body(&note.body).show();
+            }
+        }
         log::info!("fetched {} ({:?}): {:?}", account.label, account.provider, merged.status);
         state.save_cache();
         crate::tray::refresh(&app);
