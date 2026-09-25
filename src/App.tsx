@@ -3,9 +3,10 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "./api";
 import { AccountCard } from "./components/AccountCard";
 import { AddAccountView } from "./components/AddAccountView";
+import { LoginView } from "./components/LoginView";
 import type { Account, UsageSnapshot, UsageUpdated } from "./types";
 
-type View = { name: "panel" } | { name: "add" };
+type View = { name: "panel" } | { name: "add" } | { name: "login"; title: string; start: () => Promise<unknown> };
 
 export default function App() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -13,6 +14,7 @@ export default function App() {
   const [view, setView] = useState<View>({ name: "panel" });
   const [now, setNow] = useState(new Date());
   const [error, setError] = useState<string | null>(null);
+  const toPanel = useCallback(() => setView({ name: "panel" }), []);
 
   const reload = useCallback(async () => {
     setAccounts(await api.listAccounts());
@@ -38,7 +40,9 @@ export default function App() {
     (a, b) => Number(b.pinned) - Number(a.pinned) || a.createdAt.localeCompare(b.createdAt),
   );
 
-  if (view.name === "add") return <AddAccountView onDone={() => setView({ name: "panel" })} />;
+  if (view.name === "add")
+    return <AddAccountView onDone={toPanel} onStartLogin={(title, start) => setView({ name: "login", title, start })} />;
+  if (view.name === "login") return <LoginView title={view.title} start={view.start} onDone={toPanel} />;
 
   return (
     <main className="panel">
@@ -60,6 +64,8 @@ export default function App() {
           now={now}
           onPin={() => run(api.setPinned(account.id))}
           onRefresh={() => run(api.refreshAccount(account.id))}
+          onReconnect={() => setView({ name: "login", title: `Reconnect ${account.label}`, start: () => api.reconnect(account.id) })}
+          onRemove={(logout, deleteDir) => run(api.removeAccount(account.id, logout, deleteDir))}
         />
       ))}
     </main>

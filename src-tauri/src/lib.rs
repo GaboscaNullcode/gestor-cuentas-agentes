@@ -1,6 +1,7 @@
 pub mod cli;
 pub mod commands;
 pub mod logging;
+pub mod login;
 pub mod model;
 pub mod parse;
 pub mod providers;
@@ -46,6 +47,12 @@ pub fn run() {
             commands::set_pinned,
             commands::detect_existing,
             commands::add_existing,
+            commands::propose_config_dir,
+            commands::add_account,
+            commands::reconnect,
+            commands::submit_login_code,
+            commands::cancel_login,
+            commands::remove_account,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,12 +1,15 @@
+use crate::cli::run::run;
 use crate::model::{Account, Provider, UsageSnapshot};
+use crate::providers;
 use crate::scheduler::{self, ManualClaim};
 use crate::state::AppState;
-use crate::store::accounts::{new_account, set_pinned as pin, validate_new};
+use crate::store::accounts::{can_delete_dir, new_account, proposed_config_dir as propose, set_pinned as pin, validate_new};
 use crate::store::detect::{detect_existing as detect, DetectedAccount};
 use crate::tray;
 use chrono::Utc;
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, State};
 
 type CmdResult<T> = Result<T, String>;
@@ -91,4 +94,86 @@ pub fn add_existing(
     scheduler::schedule_now(&app, &account.id);
     scheduler::run_due(&app);
     Ok(account)
+}
+
+#[tauri::command]
+pub fn propose_config_dir(state: State<'_, AppState>, provider: Provider, label: String) -> String {
+    propose(provider, &label, &state.paths.home).to_string_lossy().into_owned()
+}
+
+#[tauri::command]
+pub async fn add_account(app: AppHandle, provider: Provider, label: String, config_dir: String) -> CmdResult<Account> {
+    let state = app.state::<AppState>();
+    if label.trim().is_empty() {
+        return Err("Label is required.".into());
+    }
+    let dir = PathBuf::from(config_dir.trim());
+    let account = {
+        let accounts = state.accounts.lock().unwrap();
+        validate_new(provider, &dir, &accounts)?;
+        new_account(provider, &label, dir.clone(), false, &accounts)
+    };
+    let created = !dir.exists();
+    std::fs::create_dir_all(&dir).map_err(|e| format!("Could not create {}: {e}", dir.display()))?;
+    state.accounts.lock().unwrap().push(account.clone());
+    accounts_changed(&app);
+    if let Err(e) = state.login.start(app.clone(), account.clone(), created.then_some(dir.clone()), true).await {
+        state.accounts.lock().unwrap().retain(|a| a.id != account.id);
+        if created {
+            let _ = std::fs::remove_dir(&dir);
+        }
+        accounts_changed(&app);
+        return Err(e);
+    }
+    Ok(account)
+}
+
+#[tauri::command]
+pub async fn reconnect(app: AppHandle, id: String) -> CmdResult<()> {
+    let state = app.state::<AppState>();
+    let account = state.accounts.lock().unwrap().iter().find(|a| a.id == id).cloned().ok_or("Account not found")?;
+    state.login.start(app.clone(), account, None, false).await
+}
+
+#[tauri::command]
+pub async fn submit_login_code(app: AppHandle, code: String) -> CmdResult<()> {
+    app.state::<AppState>().login.submit_code(&code).await
+}
+
+#[tauri::command]
+pub async fn cancel_login(app: AppHandle) -> CmdResult<()> {
+    app.state::<AppState>().login.cancel().await;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn remove_account(app: AppHandle, id: String, logout: bool, delete_dir: bool) -> CmdResult<()> {
+    let state = app.state::<AppState>();
+    let account = state.accounts.lock().unwrap().iter().find(|a| a.id == id).cloned().ok_or("Account not found")?;
+    if delete_dir && !can_delete_dir(&account, &state.paths.home) {
+        return Err("This directory is protected and will not be deleted.".into());
+    }
+    if logout {
+        let ctx = state.cli.lock().unwrap().clone();
+        if let Some(cmd) = ctx.command(&account, providers::logout_args(account.provider)) {
+            let _ = run(&cmd, Duration::from_secs(30)).await;
+        }
+    }
+    if delete_dir {
+        std::fs::remove_dir_all(&account.config_dir).map_err(|e| format!("Could not delete directory: {e}"))?;
+    }
+    {
+        let mut accounts = state.accounts.lock().unwrap();
+        accounts.retain(|a| a.id != id);
+        if account.pinned {
+            if let Some(first) = accounts.first_mut() {
+                first.pinned = true;
+            }
+        }
+    }
+    state.cache.lock().unwrap().snapshots.remove(&id);
+    state.runtime.lock().unwrap().remove(&id);
+    state.save_cache();
+    accounts_changed(&app);
+    Ok(())
 }

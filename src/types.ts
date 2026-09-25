@@ -49,3 +49,15 @@ export interface DetectedAccount {
   configDir: string;
   useDefaultDir: boolean;
 }
+
+export interface LoginProgress {
+  accountId: string;
+  url: string | null;
+  needsCode: boolean;
+}
+
+export interface LoginFinished {
+  accountId: string;
+  ok: boolean;
+  error: string | null;
+}

@@ -1,16 +1,40 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import { providerName } from "../format";
-import type { DetectedAccount } from "../types";
+import type { DetectedAccount, Provider } from "../types";
 
 interface Props {
   onDone: () => void;
+  onStartLogin: (title: string, start: () => Promise<unknown>) => void;
 }
 
-export function AddAccountView({ onDone }: Props) {
+export function AddAccountView({ onDone, onStartLogin }: Props) {
   const [detected, setDetected] = useState<DetectedAccount[]>([]);
   const [labels, setLabels] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+  const [provider, setProvider] = useState<Provider>("claude");
+  const [label, setLabel] = useState("");
+  const [dir, setDir] = useState("");
+  const [dirEdited, setDirEdited] = useState(false);
+  const [alreadySignedIn, setAlreadySignedIn] = useState(false);
+
+  useEffect(() => {
+    if (dirEdited || !label.trim()) return;
+    api.proposeConfigDir(provider, label).then(setDir);
+  }, [provider, label, dirEdited]);
+
+  async function submitNew() {
+    if (alreadySignedIn) {
+      try {
+        await api.addExisting(provider, label, dir, false);
+        onDone();
+      } catch (e) {
+        setError(String(e));
+      }
+      return;
+    }
+    onStartLogin(`Sign in to ${providerName(provider)} · ${label}`, () => api.addAccount(provider, label, dir));
+  }
 
   useEffect(() => {
     api.detectExisting().then(setDetected).catch((e) => setError(String(e)));
@@ -47,6 +71,37 @@ export function AddAccountView({ onDone }: Props) {
           <button onClick={() => importAccount(d)}>Import</button>
         </div>
       ))}
+      <h3>New account</h3>
+      <div className="form">
+        <label>
+          Provider
+          <select value={provider} onChange={(e) => setProvider(e.target.value as Provider)}>
+            <option value="claude">Claude</option>
+            <option value="codex">Codex</option>
+          </select>
+        </label>
+        <label>
+          Label
+          <input placeholder="Personal" value={label} onChange={(e) => setLabel(e.target.value)} />
+        </label>
+        <label>
+          Config directory
+          <input
+            value={dir}
+            onChange={(e) => {
+              setDir(e.target.value);
+              setDirEdited(true);
+            }}
+          />
+        </label>
+        <label className="checkbox">
+          <input type="checkbox" checked={alreadySignedIn} onChange={(e) => setAlreadySignedIn(e.target.checked)} />
+          This directory is already signed in
+        </label>
+        <button disabled={!label.trim() || !dir.trim()} onClick={submitNew}>
+          {alreadySignedIn ? "Add" : "Sign in"}
+        </button>
+      </div>
     </div>
   );
 }

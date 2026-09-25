@@ -9,4 +9,12 @@ export const api = {
   detectExisting: () => invoke<DetectedAccount[]>("detect_existing"),
   addExisting: (provider: Provider, label: string, configDir: string, useDefaultDir: boolean) =>
     invoke<Account>("add_existing", { provider, label, configDir, useDefaultDir }),
+  proposeConfigDir: (provider: Provider, label: string) => invoke<string>("propose_config_dir", { provider, label }),
+  addAccount: (provider: Provider, label: string, configDir: string) =>
+    invoke<Account>("add_account", { provider, label, configDir }),
+  reconnect: (id: string) => invoke<void>("reconnect", { id }),
+  submitLoginCode: (code: string) => invoke<void>("submit_login_code", { code }),
+  cancelLogin: () => invoke<void>("cancel_login"),
+  removeAccount: (id: string, logout: boolean, deleteDir: boolean) =>
+    invoke<void>("remove_account", { id, logout, deleteDir }),
 };

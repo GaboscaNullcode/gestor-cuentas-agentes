@@ -44,6 +44,7 @@ pub struct AppState {
     pub cache: Mutex<UsageCache>,
     pub runtime: Mutex<HashMap<String, Runtime>>,
     pub cli: Mutex<CliContext>,
+    pub login: crate::login::LoginManager,
 }
 
 impl AppState {
@@ -69,6 +70,7 @@ impl AppState {
             cache: Mutex::new(cache),
             runtime: Mutex::new(HashMap::new()),
             cli: Mutex::new(cli),
+            login: crate::login::LoginManager::default(),
         })
     }
 
