@@ -3,6 +3,8 @@ pub mod logging;
 pub mod model;
 pub mod parse;
 pub mod providers;
+pub mod scheduler;
+pub mod state;
 pub mod store;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
