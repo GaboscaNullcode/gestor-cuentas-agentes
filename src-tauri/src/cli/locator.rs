@@ -70,6 +70,7 @@ fn capture_from_shell() -> Vec<(String, String)> {
         }
         Err(_) => {
             let _ = child.kill();
+            let _ = child.wait();
             Vec::new()
         }
     }
