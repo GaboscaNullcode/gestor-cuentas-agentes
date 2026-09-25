@@ -3,12 +3,11 @@ use crate::model::{Account, Provider, UsageSnapshot};
 use crate::providers;
 use crate::scheduler::{self, ManualClaim};
 use crate::state::AppState;
-use crate::store::accounts::{can_delete_dir, new_account, proposed_config_dir as propose, set_pinned as pin, validate_new};
+use crate::store::accounts::{can_delete_dir, new_account, normalize_config_dir, proposed_config_dir as propose, set_pinned as pin, validate_new};
 use crate::store::detect::{detect_existing as detect, DetectedAccount};
 use crate::tray;
 use chrono::Utc;
 use std::collections::HashMap;
-use std::path::PathBuf;
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, State};
 
@@ -79,7 +78,7 @@ pub fn add_existing(
     if label.trim().is_empty() {
         return Err("Label is required.".into());
     }
-    let dir = PathBuf::from(config_dir.trim());
+    let dir = normalize_config_dir(&config_dir, &state.paths.home)?;
     if !dir.is_dir() {
         return Err(format!("{} does not exist.", dir.display()));
     }
@@ -107,7 +106,7 @@ pub async fn add_account(app: AppHandle, provider: Provider, label: String, conf
     if label.trim().is_empty() {
         return Err("Label is required.".into());
     }
-    let dir = PathBuf::from(config_dir.trim());
+    let dir = normalize_config_dir(&config_dir, &state.paths.home)?;
     let account = {
         let accounts = state.accounts.lock().unwrap();
         validate_new(provider, &dir, &accounts)?;
@@ -160,7 +159,12 @@ pub async fn remove_account(app: AppHandle, id: String, logout: bool, delete_dir
         }
     }
     if delete_dir {
-        std::fs::remove_dir_all(&account.config_dir).map_err(|e| format!("Could not delete directory: {e}"))?;
+        match std::fs::remove_dir_all(&account.config_dir) {
+            Err(e) if e.kind() != std::io::ErrorKind::NotFound => {
+                return Err(format!("Could not delete directory: {e}"));
+            }
+            _ => {} // already gone counts as deleted
+        }
     }
     {
         let mut accounts = state.accounts.lock().unwrap();

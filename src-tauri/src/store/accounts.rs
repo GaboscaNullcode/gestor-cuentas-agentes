@@ -53,18 +53,41 @@ pub fn set_pinned(accounts: &mut [Account], id: &str) {
     }
 }
 
+/// True when the raw path has a "." or ".." segment. `Path::components()`/`iter()` silently
+/// normalize those away in the middle of a path, so this scans the raw string lexically.
+pub fn has_dot_segment(path: &Path) -> bool {
+    path.to_string_lossy()
+        .split(std::path::is_separator)
+        .any(|segment| segment == "." || segment == "..")
+}
+
+/// Turns user input into an absolute, lexically normalized config dir: trims, expands a
+/// leading `~` to `home`, and rejects relative paths and "."/".." segments, so the CLI never
+/// gets a cwd-relative dir and duplicates cannot hide behind `..`.
+pub fn normalize_config_dir(input: &str, home: &Path) -> Result<PathBuf, String> {
+    let input = input.trim();
+    let path = if input == "~" {
+        home.to_path_buf()
+    } else if let Some(rest) = input.strip_prefix("~/").or_else(|| input.strip_prefix("~\\")) {
+        home.join(rest)
+    } else {
+        PathBuf::from(input)
+    };
+    if input.is_empty() || !path.is_absolute() {
+        return Err(format!("\"{input}\" must be an absolute path."));
+    }
+    if has_dot_segment(&path) {
+        return Err(format!("\"{input}\" must not contain \".\" or \"..\" segments."));
+    }
+    Ok(path)
+}
+
 /// Directories the app may delete: inside home, not home itself, not a CLI default dir.
 pub fn can_delete_dir(account: &Account, home: &Path) -> bool {
     let dir = &account.config_dir;
-    // `Path::components()`/`iter()` silently normalize away "." and ".." segments in the
-    // middle of a path, so a lexical scan of the raw string is needed to catch them: a
-    // config_dir like `home/.claude-x/../.claude` must never look deletable.
-    let has_relative_component = dir
-        .to_string_lossy()
-        .split(std::path::is_separator)
-        .any(|segment| segment == "." || segment == "..");
+    // A config_dir like `home/.claude-x/../.claude` must never look deletable.
     !account.use_default_dir
-        && !has_relative_component
+        && !has_dot_segment(dir)
         && dir.starts_with(home)
         && dir != home
         && [Provider::Claude, Provider::Codex]
@@ -146,5 +169,18 @@ mod tests {
         assert!(!can_delete_dir(&a, &home));
         a.config_dir = home.join(".").join(".claude-work");
         assert!(!can_delete_dir(&a, &home));
+    }
+
+    #[test]
+    fn normalizes_config_dirs() {
+        let home = PathBuf::from("/home/me");
+        assert_eq!(normalize_config_dir(" ~/.claude-work ", &home), Ok(home.join(".claude-work")));
+        assert_eq!(normalize_config_dir("~", &home), Ok(home.clone()));
+        assert_eq!(normalize_config_dir("/opt/claude-x", &home), Ok(PathBuf::from("/opt/claude-x")));
+        assert!(normalize_config_dir("foo", &home).is_err());
+        assert!(normalize_config_dir("~other/.claude", &home).is_err());
+        assert!(normalize_config_dir("/h/.claude-a/../.claude", &home).is_err());
+        assert!(normalize_config_dir("~/./.claude-work", &home).is_err());
+        assert!(normalize_config_dir("   ", &home).is_err());
     }
 }
