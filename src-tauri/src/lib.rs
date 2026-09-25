@@ -1,6 +1,9 @@
 pub mod cli;
+pub mod logging;
 pub mod model;
 pub mod parse;
+pub mod providers;
+pub mod store;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
