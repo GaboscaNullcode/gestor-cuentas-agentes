@@ -56,7 +56,15 @@ pub fn set_pinned(accounts: &mut [Account], id: &str) {
 /// Directories the app may delete: inside home, not home itself, not a CLI default dir.
 pub fn can_delete_dir(account: &Account, home: &Path) -> bool {
     let dir = &account.config_dir;
+    // `Path::components()`/`iter()` silently normalize away "." and ".." segments in the
+    // middle of a path, so a lexical scan of the raw string is needed to catch them: a
+    // config_dir like `home/.claude-x/../.claude` must never look deletable.
+    let has_relative_component = dir
+        .to_string_lossy()
+        .split(std::path::is_separator)
+        .any(|segment| segment == "." || segment == "..");
     !account.use_default_dir
+        && !has_relative_component
         && dir.starts_with(home)
         && dir != home
         && [Provider::Claude, Provider::Codex]
@@ -128,6 +136,15 @@ mod tests {
         a.config_dir = home.join(".claude-work");
         assert!(can_delete_dir(&a, &home));
         a.use_default_dir = true;
+        assert!(!can_delete_dir(&a, &home));
+    }
+
+    #[test]
+    fn non_normalized_dirs_are_protected() {
+        let home = PathBuf::from("/home/me");
+        let mut a = new_account(Provider::Claude, "X", home.join(".claude-x").join("..").join(".claude"), false, &[]);
+        assert!(!can_delete_dir(&a, &home));
+        a.config_dir = home.join(".").join(".claude-work");
         assert!(!can_delete_dir(&a, &home));
     }
 }
