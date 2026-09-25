@@ -22,6 +22,7 @@ pub async fn fetch_usage(ctx: &CliContext, account: &Account) -> UsageSnapshot {
         Err(e) => return failure(AccountStatus::CliMissing, Some(e.to_string())),
     };
     let (Some(stdin), Some(stdout)) = (child.stdin.take(), child.stdout.take()) else {
+        let _ = child.kill().await;
         return failure(AccountStatus::Error("could not open codex app-server pipes".into()), None);
     };
     let result = tokio::time::timeout(TIMEOUT, read_rate_limits(BufReader::new(stdout), stdin)).await;

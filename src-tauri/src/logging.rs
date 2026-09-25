@@ -24,8 +24,8 @@ fn redact_value(value: &mut Value) {
     match value {
         Value::Object(map) => {
             for (key, inner) in map.iter_mut() {
-                if is_secret_key(key) && !inner.is_object() && !inner.is_array() {
-                    *inner = Value::String("<redacted>".to_string());
+                if is_secret_key(key) {
+                    redact_secret(inner);
                 } else {
                     redact_value(inner);
                 }
@@ -33,6 +33,25 @@ fn redact_value(value: &mut Value) {
         }
         Value::Array(items) => items.iter_mut().for_each(redact_value),
         _ => {}
+    }
+}
+
+/// Redacts a value known to sit under a secret-looking key: scalars are masked directly;
+/// array elements that are scalars are masked too, while nested objects/arrays are still
+/// walked with the normal recursion so their own secret-looking keys get masked.
+fn redact_secret(value: &mut Value) {
+    match value {
+        Value::Object(_) => redact_value(value),
+        Value::Array(items) => {
+            for item in items.iter_mut() {
+                if item.is_object() || item.is_array() {
+                    redact_value(item);
+                } else {
+                    *item = Value::String("<redacted>".to_string());
+                }
+            }
+        }
+        _ => *value = Value::String("<redacted>".to_string()),
     }
 }
 
@@ -75,6 +94,13 @@ mod tests {
         assert!(!out.contains("abc") && !out.contains("def") && !out.contains("Bearer z"));
         assert!(out.contains("\"plan\":\"pro\""));
         assert!(out.contains("\"account_id\":\"x\""));
+    }
+
+    #[test]
+    fn redacts_secret_arrays_of_scalars() {
+        let out = redact(r#"{"access_tokens":["abc","def"],"plan":"pro"}"#);
+        assert!(!out.contains("abc") && !out.contains("def"));
+        assert!(out.contains("\"plan\":\"pro\""));
     }
 
     #[test]
