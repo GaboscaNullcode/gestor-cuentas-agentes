@@ -67,10 +67,25 @@ pub enum CodexRpcError {
     Other(String),
 }
 
+const AUTH_HINTS: [&str; 12] = [
+    "authentication required",
+    "not logged in",
+    "unauthorized",
+    "refresh token",
+    "refresh_token",
+    "expired",
+    "sign in again",
+    "log in again",
+    "login again",
+    "401",
+    "invalid_grant",
+    "reauth",
+];
+
 pub fn classify_rpc_error(message: &str) -> CodexRpcError {
     let lower = message.to_lowercase();
     // Auth first: the auth error message itself contains "rate limits".
-    if lower.contains("authentication required") || lower.contains("not logged in") || lower.contains("unauthorized") {
+    if AUTH_HINTS.iter().any(|hint| lower.contains(hint)) {
         CodexRpcError::Auth(message.to_string())
     } else if lower.contains("429") || lower.contains("rate limit") || lower.contains("too many requests") {
         CodexRpcError::RateLimited(message.to_string())
@@ -190,6 +205,24 @@ mod tests {
         ));
         assert!(matches!(classify_rpc_error("HTTP 429 Too Many Requests"), CodexRpcError::RateLimited(_)));
         assert!(matches!(classify_rpc_error("boom"), CodexRpcError::Other(_)));
+    }
+
+    #[test]
+    fn expired_or_revoked_sessions_are_auth_errors() {
+        for message in [
+            "Your refresh token has expired. Please sign in again.",
+            "refresh_token_reused",
+            "token expired while reading rate limits",
+            "Please log in again",
+            "please login again",
+            "HTTP 401 while fetching rate limits",
+            "invalid_grant",
+            "reauthentication required",
+        ] {
+            assert!(matches!(classify_rpc_error(message), CodexRpcError::Auth(_)), "{message}");
+        }
+        // Auth wins over rate-limit words in the same message.
+        assert!(matches!(classify_rpc_error("401: cannot read rate limits"), CodexRpcError::Auth(_)));
     }
 
     #[tokio::test]

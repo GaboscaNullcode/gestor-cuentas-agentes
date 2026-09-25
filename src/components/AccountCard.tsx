@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { formatAgo, planLabel, providerName, statusLabel } from "../format";
-import type { Account, UsageSnapshot } from "../types";
+import type { Account, AccountStatus, UsageSnapshot } from "../types";
 import { WindowBar } from "./WindowBar";
+
+// Statuses where signing in again may fix the account; not ok, rate limited or a missing CLI.
+const RECONNECTABLE: AccountStatus["type"][] = ["needsLogin", "stale", "error"];
 
 interface Props {
   account: Account;
@@ -22,6 +25,7 @@ export function AccountCard({ account, snapshot, now, onPin, onRefresh, onReconn
   const label = snapshot ? statusLabel(snapshot.status) : "Waiting for first update";
   const status = snapshot?.status.type === "error" ? `${label}: ${snapshot.status.message}` : label;
   const dimmed = snapshot !== undefined && snapshot.status.type !== "ok";
+  const canReconnect = snapshot !== undefined && RECONNECTABLE.includes(snapshot.status.type);
   const hasFiveHour = snapshot?.windows.some((w) => w.kind.type === "fiveHour") ?? false;
   return (
     <section className="card">
@@ -52,7 +56,7 @@ export function AccountCard({ account, snapshot, now, onPin, onRefresh, onReconn
         </p>
       )}
       {snapshot?.status.type === "cliMissing" && <button onClick={onOpenSettings}>Set CLI path</button>}
-      {snapshot?.status.type === "needsLogin" && <button onClick={onReconnect}>Reconnect</button>}
+      {canReconnect && <button onClick={onReconnect}>Reconnect</button>}
       {removing && (
         <div className="confirm">
           <p>Remove {account.label} from Usage Monitor?</p>

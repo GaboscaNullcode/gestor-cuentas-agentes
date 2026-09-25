@@ -65,6 +65,27 @@ pub(crate) fn parse_iso(value: Option<&Value>) -> Option<DateTime<Utc>> {
         .map(|d| d.with_timezone(&Utc))
 }
 
+/// Text of the assistant messages the CLI itself wrote (`"model":"<synthetic>"`), which is
+/// where it explains a missing report (for example "Not logged in"). Other stdout lines can be
+/// the user's hook output, so they are ignored.
+pub fn synthetic_messages(stdout: &str) -> Vec<String> {
+    stdout
+        .lines()
+        .filter_map(|line| serde_json::from_str::<Value>(line.trim()).ok())
+        .filter(|value| value.get("type").and_then(Value::as_str) == Some("assistant"))
+        .filter(|value| value.pointer("/message/model").and_then(Value::as_str) == Some("<synthetic>"))
+        .filter_map(|value| {
+            let content = value.pointer("/message/content")?.as_array()?;
+            let text: Vec<&str> = content
+                .iter()
+                .filter(|part| part.get("type").and_then(Value::as_str) == Some("text"))
+                .filter_map(|part| part.get("text").and_then(Value::as_str))
+                .collect();
+            (!text.is_empty()).then(|| text.join("\n"))
+        })
+        .collect()
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct ClaudeAuthStatus {
     pub logged_in: bool,
@@ -144,6 +165,13 @@ mod tests {
             vec![WindowKind::FiveHour, WindowKind::Weekly, WindowKind::WeeklyScoped("Sonnet".into())]
         );
         assert_eq!(snap.windows[1].used_pct, 68.0);
+    }
+
+    #[test]
+    fn extracts_only_synthetic_assistant_text() {
+        assert_eq!(synthetic_messages(LOGGED_OUT), vec!["Not logged in".to_string()]);
+        let hook = r#"{"type":"assistant","message":{"model":"claude-fable-5-1","content":[{"type":"text","text":"login hook"}]}}"#;
+        assert!(synthetic_messages(hook).is_empty());
     }
 
     #[test]
