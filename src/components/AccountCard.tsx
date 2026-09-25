@@ -12,9 +12,10 @@ interface Props {
   onReconnect: () => void;
   onRemove: (logout: boolean, deleteDir: boolean) => void;
   onCopyAlias: () => void;
+  onOpenSettings: () => void;
 }
 
-export function AccountCard({ account, snapshot, now, onPin, onRefresh, onReconnect, onRemove, onCopyAlias }: Props) {
+export function AccountCard({ account, snapshot, now, onPin, onRefresh, onReconnect, onRemove, onCopyAlias, onOpenSettings }: Props) {
   const [removing, setRemoving] = useState(false);
   const [logout, setLogout] = useState(false);
   const [deleteDir, setDeleteDir] = useState(false);
@@ -50,6 +51,7 @@ export function AccountCard({ account, snapshot, now, onPin, onRefresh, onReconn
           {status}
         </p>
       )}
+      {snapshot?.status.type === "cliMissing" && <button onClick={onOpenSettings}>Set CLI path</button>}
       {snapshot?.status.type === "needsLogin" && <button onClick={onReconnect}>Reconnect</button>}
       {removing && (
         <div className="confirm">

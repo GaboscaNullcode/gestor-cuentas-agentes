@@ -4,9 +4,10 @@ import { api } from "./api";
 import { AccountCard } from "./components/AccountCard";
 import { AddAccountView } from "./components/AddAccountView";
 import { LoginView } from "./components/LoginView";
+import { SettingsView } from "./components/SettingsView";
 import type { Account, UsageSnapshot, UsageUpdated } from "./types";
 
-type View = { name: "panel" } | { name: "add" } | { name: "login"; title: string; start: () => Promise<unknown> };
+type View = { name: "panel" } | { name: "add" } | { name: "settings" } | { name: "login"; title: string; start: () => Promise<unknown> };
 
 export default function App() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -43,12 +44,18 @@ export default function App() {
   if (view.name === "add")
     return <AddAccountView onDone={toPanel} onStartLogin={(title, start) => setView({ name: "login", title, start })} />;
   if (view.name === "login") return <LoginView title={view.title} start={view.start} onDone={toPanel} />;
+  if (view.name === "settings") return <SettingsView onDone={toPanel} />;
 
   return (
     <main className="panel">
       <header className="panel-header">
         <h1>Usage</h1>
-        <button onClick={() => setView({ name: "add" })}>+ Add account</button>
+        <div className="card-actions">
+          <button title="Settings" onClick={() => setView({ name: "settings" })}>
+            ⚙
+          </button>
+          <button onClick={() => setView({ name: "add" })}>+ Add account</button>
+        </div>
       </header>
       {error && (
         <p className="error" onClick={() => setError(null)}>
@@ -67,6 +74,7 @@ export default function App() {
           onReconnect={() => setView({ name: "login", title: `Reconnect ${account.label}`, start: () => api.reconnect(account.id) })}
           onRemove={(logout, deleteDir) => run(api.removeAccount(account.id, logout, deleteDir))}
           onCopyAlias={() => run(api.aliasLine(account.id).then((line) => navigator.clipboard.writeText(line)))}
+          onOpenSettings={() => setView({ name: "settings" })}
         />
       ))}
     </main>

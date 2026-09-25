@@ -5,11 +5,13 @@ use crate::scheduler::{self, ManualClaim};
 use crate::state::AppState;
 use crate::store::accounts::{can_delete_dir, new_account, normalize_config_dir, proposed_config_dir as propose, set_pinned as pin, validate_new};
 use crate::store::detect::{detect_existing as detect, DetectedAccount};
+use crate::store::settings::Settings;
 use crate::tray;
 use chrono::Utc;
 use std::collections::HashMap;
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, State};
+use tauri_plugin_autostart::ManagerExt;
 
 type CmdResult<T> = Result<T, String>;
 
@@ -216,4 +218,48 @@ pub fn install_aliases(state: State<'_, AppState>) -> CmdResult<AliasStatus> {
 pub fn uninstall_aliases(state: State<'_, AppState>) -> CmdResult<AliasStatus> {
     crate::aliases::uninstall(&state.paths, &state.shell).map_err(|e| e.to_string())?;
     Ok(AliasStatus { installed: false, targets: Vec::new() })
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CliStatus {
+    claude: Option<String>,
+    codex: Option<String>,
+}
+
+#[tauri::command]
+pub fn get_settings(state: State<'_, AppState>) -> Settings {
+    state.settings.lock().unwrap().clone()
+}
+
+#[tauri::command]
+pub fn cli_status(state: State<'_, AppState>) -> CliStatus {
+    let cli = state.cli.lock().unwrap();
+    CliStatus {
+        claude: cli.claude.as_ref().map(|p| p.display().to_string()),
+        codex: cli.codex.as_ref().map(|p| p.display().to_string()),
+    }
+}
+
+#[tauri::command]
+pub fn save_settings(app: AppHandle, state: State<'_, AppState>, settings: Settings) -> CmdResult<Settings> {
+    let next = settings.normalized();
+    let prev = state.settings.lock().unwrap().clone();
+    if next.launch_at_login != prev.launch_at_login {
+        let autolaunch = app.autolaunch();
+        let result = if next.launch_at_login { autolaunch.enable() } else { autolaunch.disable() };
+        result.map_err(|e| format!("Could not change launch at login: {e}"))?;
+    }
+    *state.settings.lock().unwrap() = next.clone();
+    state.save_settings();
+    let paths_changed = next.claude_path != prev.claude_path || next.codex_path != prev.codex_path;
+    if paths_changed {
+        let resolved = providers::CliContext::resolve(&next, &state.shell, &state.paths.home, state.paths.work_dir());
+        log::info!("claude CLI: {:?}, codex CLI: {:?}", resolved.claude, resolved.codex);
+        *state.cli.lock().unwrap() = resolved;
+    }
+    if paths_changed || next.interval_minutes != prev.interval_minutes {
+        scheduler::schedule_all(&app);
+    }
+    Ok(next)
 }

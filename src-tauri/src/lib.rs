@@ -64,6 +64,9 @@ pub fn run() {
             commands::aliases_status,
             commands::install_aliases,
             commands::uninstall_aliases,
+            commands::get_settings,
+            commands::save_settings,
+            commands::cli_status,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

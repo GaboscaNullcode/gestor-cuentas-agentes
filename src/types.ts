@@ -66,3 +66,16 @@ export interface AliasStatus {
   installed: boolean;
   targets: string[];
 }
+
+export interface Settings {
+  intervalMinutes: number;
+  thresholds: number[];
+  claudePath: string | null;
+  codexPath: string | null;
+  launchAtLogin: boolean;
+}
+
+export interface CliStatus {
+  claude: string | null;
+  codex: string | null;
+}

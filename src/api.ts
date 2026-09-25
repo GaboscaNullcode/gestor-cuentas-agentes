@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { Account, AliasStatus, DetectedAccount, Provider, UsageSnapshot } from "./types";
+import type { Account, AliasStatus, CliStatus, DetectedAccount, Provider, Settings, UsageSnapshot } from "./types";
 
 export const api = {
   listAccounts: () => invoke<Account[]>("list_accounts"),
@@ -21,4 +21,7 @@ export const api = {
   aliasesStatus: () => invoke<AliasStatus>("aliases_status"),
   installAliases: () => invoke<AliasStatus>("install_aliases"),
   uninstallAliases: () => invoke<AliasStatus>("uninstall_aliases"),
+  getSettings: () => invoke<Settings>("get_settings"),
+  saveSettings: (settings: Settings) => invoke<Settings>("save_settings", { settings }),
+  cliStatus: () => invoke<CliStatus>("cli_status"),
 };
