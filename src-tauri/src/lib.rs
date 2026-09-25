@@ -1,3 +1,4 @@
+pub mod aliases;
 pub mod cli;
 pub mod commands;
 pub mod logging;
@@ -25,6 +26,11 @@ pub fn run() {
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             let state = state::AppState::load(app.handle())?;
             app.manage(state);
+            {
+                let state = app.state::<state::AppState>();
+                let accounts = state.accounts.lock().unwrap().clone();
+                let _ = aliases::write_alias_files(&state.paths, &accounts);
+            }
             tray::create(app.handle())?;
             tray::refresh(app.handle());
             scheduler::schedule_all(app.handle());
@@ -53,6 +59,10 @@ pub fn run() {
             commands::submit_login_code,
             commands::cancel_login,
             commands::remove_account,
+            commands::alias_line,
+            commands::aliases_status,
+            commands::install_aliases,
+            commands::uninstall_aliases,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

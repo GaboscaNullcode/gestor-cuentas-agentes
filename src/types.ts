@@ -61,3 +61,8 @@ export interface LoginFinished {
   ok: boolean;
   error: string | null;
 }
+
+export interface AliasStatus {
+  installed: boolean;
+  targets: string[];
+}

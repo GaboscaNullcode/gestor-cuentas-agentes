@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { Account, DetectedAccount, Provider, UsageSnapshot } from "./types";
+import type { Account, AliasStatus, DetectedAccount, Provider, UsageSnapshot } from "./types";
 
 export const api = {
   listAccounts: () => invoke<Account[]>("list_accounts"),
@@ -17,4 +17,8 @@ export const api = {
   cancelLogin: () => invoke<void>("cancel_login"),
   removeAccount: (id: string, logout: boolean, deleteDir: boolean) =>
     invoke<void>("remove_account", { id, logout, deleteDir }),
+  aliasLine: (id: string) => invoke<string>("alias_line", { id }),
+  aliasesStatus: () => invoke<AliasStatus>("aliases_status"),
+  installAliases: () => invoke<AliasStatus>("install_aliases"),
+  uninstallAliases: () => invoke<AliasStatus>("uninstall_aliases"),
 };

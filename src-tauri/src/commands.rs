@@ -17,6 +17,10 @@ type CmdResult<T> = Result<T, String>;
 pub fn accounts_changed(app: &AppHandle) {
     let state = app.state::<AppState>();
     state.save_accounts();
+    let accounts = state.accounts.lock().unwrap().clone();
+    if let Err(e) = crate::aliases::write_alias_files(&state.paths, &accounts) {
+        log::error!("writing alias files failed: {e}");
+    }
     tray::refresh(app);
     let _ = app.emit("accounts-changed", ());
 }
@@ -180,4 +184,36 @@ pub async fn remove_account(app: AppHandle, id: String, logout: bool, delete_dir
     state.save_cache();
     accounts_changed(&app);
     Ok(())
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AliasStatus {
+    installed: bool,
+    targets: Vec<String>,
+}
+
+#[tauri::command]
+pub fn alias_line(state: State<'_, AppState>, id: String) -> CmdResult<String> {
+    let accounts = state.accounts.lock().unwrap();
+    let account = accounts.iter().find(|a| a.id == id).ok_or("Account not found")?;
+    Ok(crate::aliases::alias_line(account))
+}
+
+#[tauri::command]
+pub fn aliases_status(state: State<'_, AppState>) -> AliasStatus {
+    let targets = crate::aliases::installed_targets(&state.paths, &state.shell);
+    AliasStatus { installed: !targets.is_empty(), targets: targets.iter().map(|p| p.display().to_string()).collect() }
+}
+
+#[tauri::command]
+pub fn install_aliases(state: State<'_, AppState>) -> CmdResult<AliasStatus> {
+    let targets = crate::aliases::install(&state.paths, &state.shell).map_err(|e| e.to_string())?;
+    Ok(AliasStatus { installed: !targets.is_empty(), targets: targets.iter().map(|p| p.display().to_string()).collect() })
+}
+
+#[tauri::command]
+pub fn uninstall_aliases(state: State<'_, AppState>) -> CmdResult<AliasStatus> {
+    crate::aliases::uninstall(&state.paths, &state.shell).map_err(|e| e.to_string())?;
+    Ok(AliasStatus { installed: false, targets: Vec::new() })
 }

@@ -11,9 +11,10 @@ interface Props {
   onRefresh: () => void;
   onReconnect: () => void;
   onRemove: (logout: boolean, deleteDir: boolean) => void;
+  onCopyAlias: () => void;
 }
 
-export function AccountCard({ account, snapshot, now, onPin, onRefresh, onReconnect, onRemove }: Props) {
+export function AccountCard({ account, snapshot, now, onPin, onRefresh, onReconnect, onRemove, onCopyAlias }: Props) {
   const [removing, setRemoving] = useState(false);
   const [logout, setLogout] = useState(false);
   const [deleteDir, setDeleteDir] = useState(false);
@@ -35,6 +36,9 @@ export function AccountCard({ account, snapshot, now, onPin, onRefresh, onReconn
           </button>
           <button title="Refresh" onClick={onRefresh}>
             ↻
+          </button>
+          <button title={`Copy alias ${account.aliasName}`} onClick={onCopyAlias}>
+            ⌘
           </button>
           <button title="Remove" onClick={() => setRemoving(true)}>
             ✕

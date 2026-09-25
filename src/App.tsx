@@ -66,6 +66,7 @@ export default function App() {
           onRefresh={() => run(api.refreshAccount(account.id))}
           onReconnect={() => setView({ name: "login", title: `Reconnect ${account.label}`, start: () => api.reconnect(account.id) })}
           onRemove={(logout, deleteDir) => run(api.removeAccount(account.id, logout, deleteDir))}
+          onCopyAlias={() => run(api.aliasLine(account.id).then((line) => navigator.clipboard.writeText(line)))}
         />
       ))}
     </main>
