@@ -119,7 +119,7 @@ pub fn create(app: &AppHandle) -> tauri::Result<()> {
         .on_menu_event(|app, event| match event.id().as_ref() {
             "open" => show_panel(app, Position::TopRight),
             "refresh" => scheduler::refresh_all(app),
-            "quit" => app.exit(0),
+            "quit" => quit_app(app),
             _ => {}
         })
         .on_tray_icon_event(|tray, event| {
@@ -130,6 +130,15 @@ pub fn create(app: &AppHandle) -> tauri::Result<()> {
         })
         .build(app)?;
     Ok(())
+}
+
+/// Stops an active sign-in's process tree (it may hold a local port) before exiting.
+fn quit_app(app: &AppHandle) {
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        app.state::<AppState>().login.cancel_and_wait(std::time::Duration::from_secs(2)).await;
+        app.exit(0);
+    });
 }
 
 /// Updates icon color, tooltip and (macOS/Linux) title text from the current cache.

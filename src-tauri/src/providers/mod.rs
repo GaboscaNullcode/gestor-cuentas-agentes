@@ -52,6 +52,7 @@ impl CliContext {
             env_remove,
             cwd: Some(self.work_dir.clone()),
             path_env: self.path_env.clone(),
+            new_process_group: false,
         })
     }
 }

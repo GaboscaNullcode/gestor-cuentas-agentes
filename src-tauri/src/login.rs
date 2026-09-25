@@ -1,3 +1,4 @@
+use crate::cli::run::kill_tree;
 use crate::commands::accounts_changed;
 use crate::model::Account;
 use crate::providers;
@@ -63,9 +64,10 @@ impl LoginManager {
             return Err("Another sign-in is already in progress.".into());
         }
         let ctx = app.state::<AppState>().cli.lock().unwrap().clone();
-        let cmd = ctx
+        let mut cmd = ctx
             .command(&account, providers::login_args(account.provider))
             .ok_or_else(|| format!("{} CLI not found.", account.provider.cli_name()))?;
+        cmd.new_process_group = true;
         let mut command = cmd.to_command();
         command.stdin(Stdio::piped()).kill_on_drop(true);
         let mut child = command.spawn().map_err(|e| e.to_string())?;
@@ -87,7 +89,7 @@ impl LoginManager {
                 _ = cancel_rx => false,
             };
             if !exited {
-                let _ = child.kill().await;
+                kill_tree(&mut child).await;
             }
             let state = app.state::<AppState>();
             state.login.clear().await;
@@ -125,6 +127,16 @@ impl LoginManager {
             if let Some(tx) = session.cancel.take() {
                 let _ = tx.send(());
             }
+        }
+    }
+
+    /// Cancels an active sign-in and waits (bounded) until its process tree is gone.
+    /// Used on quit, where kill-on-drop would only reach the direct child.
+    pub async fn cancel_and_wait(&self, timeout: std::time::Duration) {
+        self.cancel().await;
+        let deadline = tokio::time::Instant::now() + timeout;
+        while self.session.lock().await.is_some() && tokio::time::Instant::now() < deadline {
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         }
     }
 
