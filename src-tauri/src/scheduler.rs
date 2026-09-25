@@ -1,6 +1,6 @@
 use crate::model::{Account, AccountStatus, UsageSnapshot};
 use crate::providers;
-use crate::state::AppState;
+use crate::state::{AppState, Runtime};
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use std::time::Duration;
@@ -9,6 +9,7 @@ use tauri::{AppHandle, Emitter, Manager};
 pub const MAX_BACKOFF: Duration = Duration::from_secs(3600);
 const TICK: Duration = Duration::from_secs(10);
 const RESET_GRACE_SECS: i64 = 30;
+pub const MANUAL_REFRESH_GAP_SECS: i64 = 60;
 
 pub fn backoff_delay(interval: Duration, consecutive_errors: u32) -> Duration {
     let factor = 2u32.saturating_pow(consecutive_errors.min(16));
@@ -98,12 +99,43 @@ pub fn schedule_now(app: &AppHandle, account_id: &str) {
     entry.errors = 0;
 }
 
-pub fn refresh_all(app: &AppHandle) {
-    let ids: Vec<String> = app.state::<AppState>().accounts.lock().unwrap().iter().map(|a| a.id.clone()).collect();
-    for id in ids {
-        schedule_now(app, &id);
+/// Outcome of asking for a user-triggered refresh of one account.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ManualClaim {
+    Granted,
+    InFlight,
+    TooSoon,
+}
+
+/// One manual refresh per account per minute. Granting records the time but leaves
+/// `errors` alone, so manual clicks cannot defeat the error backoff.
+pub fn claim_manual(entry: &mut Runtime, now: DateTime<Utc>) -> ManualClaim {
+    if entry.in_flight {
+        return ManualClaim::InFlight;
     }
-    run_due(app);
+    if entry.last_manual.is_some_and(|last| (now - last).num_seconds() < MANUAL_REFRESH_GAP_SECS) {
+        return ManualClaim::TooSoon;
+    }
+    entry.last_manual = Some(now);
+    ManualClaim::Granted
+}
+
+/// "Refresh all" from the tray: fetches every account that passes the manual gate.
+pub fn refresh_all(app: &AppHandle) {
+    let state = app.state::<AppState>();
+    let now = Utc::now();
+    let granted: Vec<Account> = {
+        let accounts = state.accounts.lock().unwrap();
+        let mut runtime = state.runtime.lock().unwrap();
+        accounts
+            .iter()
+            .filter(|a| claim_manual(runtime.entry(a.id.clone()).or_default(), now) == ManualClaim::Granted)
+            .cloned()
+            .collect()
+    };
+    for account in granted {
+        start_fetch(app.clone(), account);
+    }
 }
 
 pub fn run_due(app: &AppHandle) {
@@ -170,6 +202,24 @@ mod tests {
     use std::time::Duration;
 
     const FIVE_MIN: Duration = Duration::from_secs(300);
+
+    #[test]
+    fn manual_claim_is_granted_once_per_minute() {
+        let mut entry = crate::state::Runtime { errors: 3, ..Default::default() };
+        assert_eq!(claim_manual(&mut entry, now()), ManualClaim::Granted);
+        assert_eq!(entry.last_manual, Some(now()));
+        assert_eq!(entry.errors, 3, "a manual refresh must not reset backoff");
+        assert_eq!(claim_manual(&mut entry, now() + ChronoDuration::seconds(59)), ManualClaim::TooSoon);
+        assert_eq!(entry.last_manual, Some(now()), "a refused claim must not move the gate");
+        assert_eq!(claim_manual(&mut entry, now() + ChronoDuration::seconds(60)), ManualClaim::Granted);
+    }
+
+    #[test]
+    fn manual_claim_skips_in_flight_fetches() {
+        let mut entry = crate::state::Runtime { in_flight: true, ..Default::default() };
+        assert_eq!(claim_manual(&mut entry, now()), ManualClaim::InFlight);
+        assert_eq!(entry.last_manual, None);
+    }
 
     fn now() -> DateTime<Utc> {
         Utc.with_ymd_and_hms(2026, 9, 25, 12, 0, 0).unwrap()

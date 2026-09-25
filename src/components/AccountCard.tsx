@@ -11,7 +11,8 @@ interface Props {
 }
 
 export function AccountCard({ account, snapshot, now, onPin, onRefresh }: Props) {
-  const status = snapshot ? statusLabel(snapshot.status) : "Waiting for first update";
+  const label = snapshot ? statusLabel(snapshot.status) : "Waiting for first update";
+  const status = snapshot?.status.type === "error" ? `${label}: ${snapshot.status.message}` : label;
   const dimmed = snapshot !== undefined && snapshot.status.type !== "ok";
   const hasFiveHour = snapshot?.windows.some((w) => w.kind.type === "fiveHour") ?? false;
   return (
@@ -31,7 +32,11 @@ export function AccountCard({ account, snapshot, now, onPin, onRefresh }: Props)
           </button>
         </div>
       </header>
-      {status && <p className={`status ${snapshot?.status.type ?? "pending"}`}>{status}</p>}
+      {status && (
+        <p className={`status ${snapshot?.status.type ?? "pending"}`} title={snapshot?.lastError ?? undefined}>
+          {status}
+        </p>
+      )}
       {snapshot && snapshot.windows.length > 0 && (
         <>
           {!hasFiveHour && (

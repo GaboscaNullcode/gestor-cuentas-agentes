@@ -2,6 +2,7 @@ use crate::model::{Account, AccountStatus, UsageSnapshot, WindowKind};
 use crate::scheduler;
 use crate::state::AppState;
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
 use tauri::image::Image;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
@@ -9,6 +10,25 @@ use tauri::{AppHandle, Manager};
 use tauri_plugin_positioner::{Position, WindowExt};
 
 pub const TRAY_ID: &str = "main";
+
+/// A tray click first blurs the open panel (which hides it) and only then reaches the
+/// click handler; a hide this recent means the click was meant to close the panel.
+const BLUR_CLICK_WINDOW_MS: u64 = 300;
+
+static LAST_BLUR_HIDE_MS: AtomicU64 = AtomicU64::new(0);
+
+fn now_ms() -> u64 {
+    chrono::Utc::now().timestamp_millis().max(0) as u64
+}
+
+pub fn recently_hidden(now_ms: u64, hidden_ms: u64) -> bool {
+    hidden_ms != 0 && now_ms.saturating_sub(hidden_ms) < BLUR_CLICK_WINDOW_MS
+}
+
+/// Called when the panel hides because it lost focus.
+pub fn note_blur_hide() {
+    LAST_BLUR_HIDE_MS.store(now_ms(), Ordering::Relaxed);
+}
 
 /// Variant order is severity order: Red beats an error (Gray), which beats Yellow-free Green.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -131,6 +151,8 @@ pub fn toggle_panel(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         if window.is_visible().unwrap_or(false) {
             let _ = window.hide();
+        } else if recently_hidden(now_ms(), LAST_BLUR_HIDE_MS.load(Ordering::Relaxed)) {
+            // The blur caused by this very click already closed the panel.
         } else {
             show_panel(app, Position::TrayCenter);
         }
@@ -192,6 +214,13 @@ mod tests {
         assert_eq!(worst_level([&green, &broken].into_iter()), Level::Gray);
         assert_eq!(worst_level([&green, &broken, &red].into_iter()), Level::Red);
         assert_eq!(worst_level(std::iter::empty()), Level::Gray);
+    }
+
+    #[test]
+    fn click_right_after_blur_hide_counts_as_closing() {
+        assert!(recently_hidden(10_250, 10_000));
+        assert!(!recently_hidden(10_300, 10_000));
+        assert!(!recently_hidden(10_000, 0), "no blur-hide recorded yet");
     }
 
     #[test]

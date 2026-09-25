@@ -1,5 +1,5 @@
 use crate::model::{Account, Provider, UsageSnapshot};
-use crate::scheduler;
+use crate::scheduler::{self, ManualClaim};
 use crate::state::AppState;
 use crate::store::accounts::{new_account, set_pinned as pin, validate_new};
 use crate::store::detect::{detect_existing as detect, DetectedAccount};
@@ -10,8 +10,6 @@ use std::path::PathBuf;
 use tauri::{AppHandle, Emitter, Manager, State};
 
 type CmdResult<T> = Result<T, String>;
-
-const MANUAL_REFRESH_GAP_SECS: i64 = 60;
 
 /// Persists accounts and pushes the change to the scheduler, the tray and the UI.
 pub fn accounts_changed(app: &AppHandle) {
@@ -33,17 +31,13 @@ pub fn get_snapshots(state: State<'_, AppState>) -> HashMap<String, UsageSnapsho
 
 #[tauri::command]
 pub fn refresh_account(app: AppHandle, state: State<'_, AppState>, id: String) -> CmdResult<()> {
-    let now = Utc::now();
     {
         let mut runtime = state.runtime.lock().unwrap();
-        let entry = runtime.entry(id.clone()).or_default();
-        if entry.in_flight {
-            return Ok(());
+        match scheduler::claim_manual(runtime.entry(id.clone()).or_default(), Utc::now()) {
+            ManualClaim::Granted => {}
+            ManualClaim::InFlight => return Ok(()),
+            ManualClaim::TooSoon => return Err("Please wait a minute between manual refreshes.".into()),
         }
-        if entry.last_manual.is_some_and(|last| (now - last).num_seconds() < MANUAL_REFRESH_GAP_SECS) {
-            return Err("Please wait a minute between manual refreshes.".into());
-        }
-        entry.last_manual = Some(now);
     }
     let account = state
         .accounts
