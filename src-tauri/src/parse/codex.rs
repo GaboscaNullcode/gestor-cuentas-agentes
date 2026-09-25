@@ -11,13 +11,13 @@ const WEEK_MINS: i64 = 10080;
 /// The main `codex` limit comes first; other limit ids (per-model limits) follow.
 pub fn parse_codex_rate_limits(result: &Value, fetched_at: DateTime<Utc>) -> UsageSnapshot {
     let mut limits: Vec<&Value> = Vec::new();
-    if let Some(by_id) = result.get("rateLimitsByLimitId").and_then(Value::as_object) {
-        if let Some(main) = by_id.get(MAIN_LIMIT_ID) {
-            limits.push(main);
-        }
-        limits.extend(by_id.iter().filter(|(id, _)| id.as_str() != MAIN_LIMIT_ID).map(|(_, v)| v));
-    } else if let Some(main) = result.get("rateLimits") {
+    let by_id = result.get("rateLimitsByLimitId").and_then(Value::as_object);
+    // The main limit comes from `rateLimitsByLimitId.codex`, else from `rateLimits`.
+    if let Some(main) = by_id.and_then(|m| m.get(MAIN_LIMIT_ID)).or_else(|| result.get("rateLimits")) {
         limits.push(main);
+    }
+    if let Some(by_id) = by_id {
+        limits.extend(by_id.iter().filter(|(id, _)| id.as_str() != MAIN_LIMIT_ID).map(|(_, v)| v));
     }
     let plan = limits
         .iter()
@@ -189,6 +189,20 @@ mod tests {
         assert_eq!(snap.windows.len(), 1);
         assert_eq!(snap.windows[0].kind, WindowKind::FiveHour);
         assert_eq!(snap.windows[0].resets_at, None);
+    }
+
+    #[test]
+    fn uses_rate_limits_as_main_when_by_id_lacks_codex() {
+        let value: Value = serde_json::json!({
+            "rateLimits": { "limitId": "codex", "primary": { "usedPercent": 5, "windowDurationMins": 300, "resetsAt": null }, "planType": "plus" },
+            "rateLimitsByLimitId": {
+                "max": { "limitId": "max", "limitName": "Max", "primary": { "usedPercent": 40, "windowDurationMins": 10080, "resetsAt": null } }
+            }
+        });
+        let snap = parse_codex_rate_limits(&value, now());
+        let kinds: Vec<_> = snap.windows.iter().map(|w| (w.kind.clone(), w.used_pct)).collect();
+        assert_eq!(kinds, vec![(WindowKind::FiveHour, 5.0), (WindowKind::WeeklyScoped("Max".into()), 40.0)]);
+        assert_eq!(snap.plan.as_deref(), Some("plus"));
     }
 
     #[test]

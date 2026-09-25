@@ -12,6 +12,12 @@ export interface Account {
   createdByApp: boolean;
 }
 
+/** An account as listed for the panel, with what the backend allows for it. */
+export interface AccountView extends Account {
+  /** Whether the config directory may be deleted on removal; the backend re-checks it. */
+  canDeleteDir: boolean;
+}
+
 export type WindowKind =
   | { type: "fiveHour" }
   | { type: "weekly" }

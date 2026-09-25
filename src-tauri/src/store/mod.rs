@@ -6,6 +6,9 @@ pub mod settings;
 use serde::{de::DeserializeOwned, Serialize};
 use std::fs;
 use std::path::Path;
+use std::sync::atomic::{AtomicU64, Ordering};
+
+static TMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 /// Reads a JSON file; a missing file gives the default, a corrupt one is moved to `*.corrupt`
 /// so the next save does not silently destroy the user's data.
@@ -21,14 +24,20 @@ pub fn read_json<T: DeserializeOwned + Default>(path: &Path) -> T {
     }
 }
 
+/// Writes to a unique temp file next to `path` and renames it into place. The temp name is
+/// unique per write (pid + counter), so concurrent saves never share one inode.
 pub fn write_json_atomic<T: Serialize>(path: &Path, value: &T) -> std::io::Result<()> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
-    let tmp = path.with_extension("json.tmp");
+    let n = TMP_COUNTER.fetch_add(1, Ordering::Relaxed);
+    let tmp = path.with_extension(format!("json.{}.{n}.tmp", std::process::id()));
     let bytes = serde_json::to_vec_pretty(value).map_err(std::io::Error::other)?;
-    fs::write(&tmp, bytes)?;
-    fs::rename(tmp, path)
+    if let Err(e) = fs::write(&tmp, bytes).and_then(|()| fs::rename(&tmp, path)) {
+        let _ = fs::remove_file(&tmp);
+        return Err(e);
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -45,6 +54,20 @@ mod tests {
         let custom = Settings { interval_minutes: 7, ..Default::default() };
         write_json_atomic(&path, &custom).unwrap();
         assert_eq!(read_json::<Settings>(&path), custom);
+    }
+
+    #[test]
+    fn sequential_writes_keep_the_last_content_and_leave_no_temp_files() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.json");
+        write_json_atomic(&path, &Settings { interval_minutes: 3, ..Default::default() }).unwrap();
+        write_json_atomic(&path, &Settings { interval_minutes: 9, ..Default::default() }).unwrap();
+        assert_eq!(read_json::<Settings>(&path).interval_minutes, 9);
+        let names: Vec<_> = std::fs::read_dir(dir.path())
+            .unwrap()
+            .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(names, vec!["settings.json".to_string()]);
     }
 
     #[test]

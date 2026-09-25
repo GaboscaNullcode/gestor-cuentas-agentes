@@ -27,9 +27,26 @@ pub fn accounts_changed(app: &AppHandle) {
     let _ = app.emit("accounts-changed", ());
 }
 
+/// An account as the UI sees it, with what the backend allows for it.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AccountView {
+    #[serde(flatten)]
+    account: Account,
+    /// Whether "also delete the directory" is offered. `remove_account` re-checks it.
+    can_delete_dir: bool,
+}
+
 #[tauri::command]
-pub fn list_accounts(state: State<'_, AppState>) -> Vec<Account> {
-    state.accounts.lock().unwrap().clone()
+pub fn list_accounts(state: State<'_, AppState>) -> Vec<AccountView> {
+    let home = &state.paths.home;
+    state
+        .accounts
+        .lock()
+        .unwrap()
+        .iter()
+        .map(|account| AccountView { can_delete_dir: can_delete_dir(account, home), account: account.clone() })
+        .collect()
 }
 
 #[tauri::command]
@@ -85,6 +102,12 @@ pub fn add_existing(
         return Err("Label is required.".into());
     }
     let dir = normalize_config_dir(&config_dir, &state.paths.home)?;
+    if use_default_dir && dir != state.paths.home.join(provider.default_dir_name()) {
+        return Err(format!(
+            "Only ~/{} can use the CLI's default location.",
+            provider.default_dir_name()
+        ));
+    }
     if !dir.is_dir() {
         return Err(format!("{} does not exist.", dir.display()));
     }
@@ -204,22 +227,43 @@ pub fn alias_line(state: State<'_, AppState>, id: String) -> CmdResult<String> {
     Ok(crate::aliases::alias_line(account))
 }
 
+// The alias commands touch shell profiles and, on Windows, spawn PowerShell to find them,
+// so they run on a blocking thread instead of the main thread.
+
 #[tauri::command]
-pub fn aliases_status(state: State<'_, AppState>) -> AliasStatus {
-    let targets = crate::aliases::installed_targets(&state.paths, &state.shell);
-    AliasStatus { installed: !targets.is_empty(), targets: targets.iter().map(|p| p.display().to_string()).collect() }
+pub async fn aliases_status(app: AppHandle) -> CmdResult<AliasStatus> {
+    blocking(app, |state| {
+        let targets = crate::aliases::installed_targets(&state.paths, &state.shell);
+        Ok(AliasStatus { installed: !targets.is_empty(), targets: targets.iter().map(|p| p.display().to_string()).collect() })
+    })
+    .await
 }
 
 #[tauri::command]
-pub fn install_aliases(state: State<'_, AppState>) -> CmdResult<AliasStatus> {
-    let targets = crate::aliases::install(&state.paths, &state.shell).map_err(|e| e.to_string())?;
-    Ok(AliasStatus { installed: !targets.is_empty(), targets: targets.iter().map(|p| p.display().to_string()).collect() })
+pub async fn install_aliases(app: AppHandle) -> CmdResult<AliasStatus> {
+    blocking(app, |state| {
+        let targets = crate::aliases::install(&state.paths, &state.shell).map_err(|e| e.to_string())?;
+        Ok(AliasStatus { installed: !targets.is_empty(), targets: targets.iter().map(|p| p.display().to_string()).collect() })
+    })
+    .await
 }
 
 #[tauri::command]
-pub fn uninstall_aliases(state: State<'_, AppState>) -> CmdResult<AliasStatus> {
-    crate::aliases::uninstall(&state.paths, &state.shell).map_err(|e| e.to_string())?;
-    Ok(AliasStatus { installed: false, targets: Vec::new() })
+pub async fn uninstall_aliases(app: AppHandle) -> CmdResult<AliasStatus> {
+    blocking(app, |state| {
+        crate::aliases::uninstall(&state.paths, &state.shell).map_err(|e| e.to_string())?;
+        Ok(AliasStatus { installed: false, targets: Vec::new() })
+    })
+    .await
+}
+
+async fn blocking<T: Send + 'static>(
+    app: AppHandle,
+    f: impl FnOnce(&AppState) -> CmdResult<T> + Send + 'static,
+) -> CmdResult<T> {
+    tauri::async_runtime::spawn_blocking(move || f(&app.state::<AppState>()))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 #[derive(serde::Serialize)]

@@ -1,8 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { Account, AliasStatus, CliStatus, DetectedAccount, Provider, Settings, UsageSnapshot } from "./types";
+import type { Account, AccountView, AliasStatus, CliStatus, DetectedAccount, Provider, Settings, UsageSnapshot } from "./types";
 
 export const api = {
-  listAccounts: () => invoke<Account[]>("list_accounts"),
+  listAccounts: () => invoke<AccountView[]>("list_accounts"),
   getSnapshots: () => invoke<Record<string, UsageSnapshot>>("get_snapshots"),
   refreshAccount: (id: string) => invoke<void>("refresh_account", { id }),
   setPinned: (id: string) => invoke<void>("set_pinned", { id }),

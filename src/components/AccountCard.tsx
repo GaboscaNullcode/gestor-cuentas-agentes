@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { formatAgo, planLabel, providerName, statusLabel } from "../format";
-import type { Account, AccountStatus, UsageSnapshot } from "../types";
+import type { AccountStatus, AccountView, UsageSnapshot } from "../types";
 import { WindowBar } from "./WindowBar";
 
 // Statuses where signing in again may fix the account; not ok, rate limited or a missing CLI.
 const RECONNECTABLE: AccountStatus["type"][] = ["needsLogin", "stale", "error"];
 
 interface Props {
-  account: Account;
+  account: AccountView;
   snapshot: UsageSnapshot | undefined;
   now: Date;
   onPin: () => void;
@@ -64,14 +64,14 @@ export function AccountCard({ account, snapshot, now, onPin, onRefresh, onReconn
             <input type="checkbox" checked={logout} onChange={(e) => setLogout(e.target.checked)} />
             Also sign out of the CLI
           </label>
-          {!account.useDefaultDir && (
+          {account.canDeleteDir && (
             <label className="checkbox">
               <input type="checkbox" checked={deleteDir} onChange={(e) => setDeleteDir(e.target.checked)} />
               Also delete <code>{account.configDir}</code>
             </label>
           )}
           <div className="card-actions">
-            <button onClick={() => onRemove(logout, deleteDir)}>Remove</button>
+            <button onClick={() => onRemove(logout, account.canDeleteDir && deleteDir)}>Remove</button>
             <button onClick={() => setRemoving(false)}>Cancel</button>
           </div>
         </div>

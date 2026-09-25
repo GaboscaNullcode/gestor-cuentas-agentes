@@ -5,12 +5,12 @@ import { AccountCard } from "./components/AccountCard";
 import { AddAccountView } from "./components/AddAccountView";
 import { LoginView } from "./components/LoginView";
 import { SettingsView } from "./components/SettingsView";
-import type { Account, UsageSnapshot, UsageUpdated } from "./types";
+import type { AccountView, UsageSnapshot, UsageUpdated } from "./types";
 
 type View = { name: "panel" } | { name: "add" } | { name: "settings" } | { name: "login"; title: string; start: () => Promise<unknown> };
 
 export default function App() {
-  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [accounts, setAccounts] = useState<AccountView[]>([]);
   const [snapshots, setSnapshots] = useState<Record<string, UsageSnapshot>>({});
   const [view, setView] = useState<View>({ name: "panel" });
   const [now, setNow] = useState(new Date());
