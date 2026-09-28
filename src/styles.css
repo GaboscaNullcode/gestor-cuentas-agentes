@@ -30,6 +30,7 @@
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
+  --radius-window: 12px;
   --radius-pill: 999px;
   --space-1: 4px;
   --space-2: 8px;
@@ -77,7 +78,9 @@
 /* Base */
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; }
-body { margin: 0; overflow: hidden; background: var(--color-bg); }
+/* The native window is transparent so #root can draw the rounded corners. */
+body { margin: 0; overflow: hidden; background: transparent; }
+#root { box-sizing: border-box; overflow: hidden; border-radius: var(--radius-window); border: 1px solid var(--color-border); background: var(--color-bg); }
 h1, h2, p { margin: 0; font: inherit; }
 button, input { font: inherit; color: inherit; }
 button { margin: 0; padding: 0; border: 0; background: none; cursor: pointer; text-align: inherit; }
