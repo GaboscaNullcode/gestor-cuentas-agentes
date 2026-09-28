@@ -3,7 +3,7 @@ use crate::model::{Account, Provider, UsageSnapshot};
 use crate::providers;
 use crate::scheduler::{self, ManualClaim};
 use crate::state::AppState;
-use crate::store::accounts::{can_delete_dir, new_account, normalize_config_dir, proposed_config_dir as propose, set_pinned as pin, validate_new};
+use crate::store::accounts::{can_delete_dir, new_account, normalize_config_dir, proposed_config_dir as propose, rename, set_pinned as pin, validate_new};
 use crate::store::detect::{detect_existing as detect, DetectedAccount};
 use crate::store::settings::Settings;
 use crate::tray;
@@ -79,6 +79,13 @@ pub fn refresh_account(app: AppHandle, state: State<'_, AppState>, id: String) -
 #[tauri::command]
 pub fn set_pinned(app: AppHandle, state: State<'_, AppState>, id: String) -> CmdResult<()> {
     pin(&mut state.accounts.lock().unwrap(), &id);
+    accounts_changed(&app);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn rename_account(app: AppHandle, state: State<'_, AppState>, id: String, label: String) -> CmdResult<()> {
+    rename(&mut state.accounts.lock().unwrap(), &id, &label)?;
     accounts_changed(&app);
     Ok(())
 }

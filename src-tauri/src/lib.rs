@@ -52,6 +52,7 @@ pub fn run() {
             commands::get_snapshots,
             commands::refresh_account,
             commands::set_pinned,
+            commands::rename_account,
             commands::detect_existing,
             commands::add_existing,
             commands::propose_config_dir,

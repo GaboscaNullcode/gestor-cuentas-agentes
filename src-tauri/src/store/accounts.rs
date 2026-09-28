@@ -54,6 +54,23 @@ pub fn set_pinned(accounts: &mut [Account], id: &str) {
     }
 }
 
+pub const MAX_LABEL_CHARS: usize = 40;
+
+/// Changes only the display label. The alias name and config dir stay as they were, so
+/// renaming never breaks a terminal alias or moves a session.
+pub fn rename(accounts: &mut [Account], id: &str, label: &str) -> Result<(), String> {
+    let label = label.trim();
+    if label.is_empty() {
+        return Err("Label is required.".into());
+    }
+    if label.chars().count() > MAX_LABEL_CHARS {
+        return Err(format!("Label must be at most {MAX_LABEL_CHARS} characters."));
+    }
+    let account = accounts.iter_mut().find(|a| a.id == id).ok_or("Account not found.")?;
+    account.label = label.to_string();
+    Ok(())
+}
+
 /// True when the raw path has a "." or ".." segment. `Path::components()`/`iter()` silently
 /// normalize those away in the middle of a path, so this scans the raw string lexically.
 pub fn has_dot_segment(path: &Path) -> bool {
@@ -136,6 +153,27 @@ mod tests {
         let existing = vec![new_account(Provider::Claude, "Work", dir.clone(), false, &[])];
         assert!(validate_new(Provider::Claude, &dir, &existing).is_err());
         assert!(validate_new(Provider::Codex, &dir, &existing).is_ok());
+    }
+
+    #[test]
+    fn rename_changes_label_only() {
+        let mut accounts = vec![new_account(Provider::Claude, "Work", PathBuf::from("/h/.claude-work"), false, &[])];
+        let id = accounts[0].id.clone();
+        let alias = accounts[0].alias_name.clone();
+        rename(&mut accounts, &id, "  Office  ").unwrap();
+        assert_eq!(accounts[0].label, "Office");
+        assert_eq!(accounts[0].alias_name, alias);
+        assert_eq!(accounts[0].config_dir, PathBuf::from("/h/.claude-work"));
+    }
+
+    #[test]
+    fn rename_rejects_empty_long_or_unknown() {
+        let mut accounts = vec![new_account(Provider::Claude, "Work", PathBuf::from("/h/.claude-work"), false, &[])];
+        let id = accounts[0].id.clone();
+        assert!(rename(&mut accounts, &id, "   ").is_err());
+        assert!(rename(&mut accounts, &id, &"x".repeat(MAX_LABEL_CHARS + 1)).is_err());
+        assert!(rename(&mut accounts, "missing", "Office").is_err());
+        assert_eq!(accounts[0].label, "Work");
     }
 
     #[test]
