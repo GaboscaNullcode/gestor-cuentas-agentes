@@ -19,7 +19,7 @@
     </div>
     <div style="display: flex; align-items: center; gap: 2px">
       <dc-import name="IconButton" glyph="{{starGlyph}}" label="{{starLabel}}" data-action="do:toggle whether this account shows in the tray" hint-size="28px,28px"></dc-import>
-      <dc-import name="IconButton" glyph="more" label="More actions" data-action="open:AccountMenu" hint-size="28px,28px"></dc-import>
+      <dc-import name="IconButton" glyph="ellipsis" label="More actions" data-action="open:AccountMenu" hint-size="28px,28px"></dc-import>
     </div>
   </div>
   <sc-if value="{{hasNotice}}" hint-placeholder-val="{{ false }}">
@@ -38,7 +38,7 @@
   <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 10px; border-top: 1px solid var(--color-border); font: 400 var(--text-xs)/1 var(--font-sans); color: var(--color-subtle)">
     <span>Updated {{updated}}</span>
     <div data-action="do:refresh this account now" style="display: flex; align-items: center; gap: 4px; color: var(--color-muted); cursor: pointer">
-      <dc-import name="Icon" glyph="refresh" size="13" hint-size="13px,13px"></dc-import>
+      <dc-import name="Icon" glyph="refresh-cw" size="13" hint-size="13px,13px"></dc-import>
       <span>Refresh</span>
     </div>
   </div>

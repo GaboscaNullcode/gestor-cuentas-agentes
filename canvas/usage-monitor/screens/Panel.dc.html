@@ -7,13 +7,13 @@
   <meta name="dc:frame" content="380xauto">
   <meta name="dc:route" content="panel">
   <meta name="dc:states" content="empty: no accounts, see Panel--empty; loading: a card with no snapshot shows the StatusChip pending and two skeleton WindowBars; error: a dismissible banner under the header with the message and a close button">
-  <meta name="dc:behavior" content="The real window is 380×620: the header and the Most headroom strip stay fixed and the card list scrolls under them. Cards sort pinned first, then by creation date. Relative times tick every 30 s. Follows prefers-color-scheme; the theme tweak previews both.">
+  <meta name="dc:behavior" content="The provider filter (All, Claude, Codex) sits under the header, shows a count per provider, is remembered between launches and is hidden when every account uses the same provider. Filtering also narrows the Most headroom strip. The real window is 380×620: the header and the Most headroom strip stay fixed and the card list scrolls under them. Cards sort pinned first, then by creation date. Relative times tick every 30 s. Follows prefers-color-scheme; the theme tweak previews both.">
 </head>
 <body>
 <x-dc>
 <helmet>
   <style>
-    body { margin: 0; color: var(--color-fg); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+    body { margin: 0; -webkit-font-smoothing: antialiased; }
     a { color: var(--color-accent); } a:hover { color: var(--color-fg); }
   </style>
 </helmet>
@@ -23,7 +23,7 @@
       <span style="font: 600 var(--text-lg)/1.2 var(--font-sans)">Usage</span>
       <span data-derive="number of accounts, then the number whose status is not ok" style="font: 400 var(--text-xs)/1.2 var(--font-sans); color: var(--color-subtle)">{{subtitle}}</span>
     </div>
-    <dc-import name="IconButton" glyph="gear" label="Settings" data-action="go:Settings" hint-size="28px,28px"></dc-import>
+    <dc-import name="IconButton" glyph="settings" label="Settings" data-action="go:Settings" hint-size="28px,28px"></dc-import>
     <dc-import name="Button" variant="primary" size="sm" icon="plus" label="Add" data-action="go:AddAccount" hint-size="68px,28px"></dc-import>
   </div>
   <sc-if value="{{isEmpty}}" hint-placeholder-val="{{ false }}">
@@ -40,51 +40,81 @@
     </div>
   </sc-if>
   <sc-if value="{{hasAccounts}}" hint-placeholder-val="{{ true }}">
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; margin: 0 var(--space-3) 10px; padding: 3px; border-radius: var(--radius-md); background: var(--color-surface); border: 1px solid var(--color-border); font: 500 var(--text-sm)/1 var(--font-sans)">
+      <div data-action="do:show every account" style="display: flex; align-items: center; justify-content: center; gap: 6px; height: 28px; border-radius: 7px; background: {{tabAll.bg}}; color: {{tabAll.fg}}; cursor: pointer">
+        <span>All</span><span data-derive="number of accounts" style="font: 500 var(--text-xs)/1 var(--font-mono); color: var(--color-subtle)">4</span>
+      </div>
+      <div data-action="do:show only Claude accounts" style="display: flex; align-items: center; justify-content: center; gap: 6px; height: 28px; border-radius: 7px; background: {{tabClaude.bg}}; color: {{tabClaude.fg}}; cursor: pointer">
+        <dc-import name="ProviderMark" provider="claude" size="sm" hint-size="20px,20px"></dc-import>
+        <span>Claude</span><span data-derive="number of Claude accounts" style="font: 500 var(--text-xs)/1 var(--font-mono); color: var(--color-subtle)">2</span>
+      </div>
+      <div data-action="do:show only Codex accounts" style="display: flex; align-items: center; justify-content: center; gap: 6px; height: 28px; border-radius: 7px; background: {{tabCodex.bg}}; color: {{tabCodex.fg}}; cursor: pointer">
+        <dc-import name="ProviderMark" provider="codex" size="sm" hint-size="20px,20px"></dc-import>
+        <span>Codex</span><span data-derive="number of Codex accounts" style="font: 500 var(--text-xs)/1 var(--font-mono); color: var(--color-subtle)">2</span>
+      </div>
+    </div>
     <div style="display: flex; flex-direction: column; gap: var(--space-2); margin: 0 var(--space-3) var(--space-3); padding: 10px var(--space-3); border-radius: var(--radius-md); background: var(--color-surface-2)">
       <span style="font: 600 var(--text-xs)/1 var(--font-sans); color: var(--color-subtle); letter-spacing: 0.04em; text-transform: uppercase">Most headroom now</span>
-      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3)">
-        <div data-derive="Claude account with status ok whose tightest window has the most room left; the value is 100 minus its highest usedPct" style="display: flex; align-items: center; gap: var(--space-2); min-width: 0">
-          <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--color-claude); flex: none"></span>
+      <div style="display: grid; grid-template-columns: repeat({{stripCols}}, minmax(0, 1fr)); gap: var(--space-3)">
+        <sc-if value="{{showClaude}}" hint-placeholder-val="{{ true }}"><div data-derive="Claude account with status ok whose tightest window has the most room left; the value is 100 minus its highest usedPct" style="display: flex; align-items: center; gap: var(--space-2); min-width: 0">
+          <dc-import name="ProviderMark" provider="claude" size="sm" hint-size="20px,20px"></dc-import>
           <span style="font: 500 var(--text-md)/1.2 var(--font-sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Work</span>
           <span style="font: 500 var(--text-sm)/1 var(--font-mono); color: var(--color-warn)">18% left</span>
-        </div>
-        <div data-derive="Codex account with status ok whose tightest window has the most room left; the value is 100 minus its highest usedPct" style="display: flex; align-items: center; gap: var(--space-2); min-width: 0">
-          <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--color-codex); flex: none"></span>
+        </div></sc-if>
+        <sc-if value="{{showCodex}}" hint-placeholder-val="{{ true }}"><div data-derive="Codex account with status ok whose tightest window has the most room left; the value is 100 minus its highest usedPct" style="display: flex; align-items: center; gap: var(--space-2); min-width: 0">
+          <dc-import name="ProviderMark" provider="codex" size="sm" hint-size="20px,20px"></dc-import>
           <span style="font: 500 var(--text-md)/1.2 var(--font-sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Personal</span>
           <span style="font: 500 var(--text-sm)/1 var(--font-mono); color: var(--color-ok)">77% left</span>
-        </div>
+        </div></sc-if>
       </div>
     </div>
     <div style="display: flex; flex-direction: column; gap: 10px; padding: 0 var(--space-3) var(--space-4)">
+      <sc-if value="{{showClaude}}" hint-placeholder-val="{{ true }}">
       <dc-import name="AccountCard" provider="claude" label="Work" plan="Max" status="ok" pinned="true" updated="2 min ago" data-bind="provider=accounts[id=work].provider; label=accounts[id=work].label; plan=accounts[id=work].plan; status=accounts[id=work].status; updated=accounts[id=work].updated" hint-size="356px,236px">
         <dc-import name="WindowBar" label="5h" used-pct="82" pace-pct="76" resets="in 1h 12m" data-bind="label=accounts[id=work].windows[0].kind; usedPct=accounts[id=work].windows[0].usedPct; pacePct=accounts[id=work].windows[0].pacePct; resets=accounts[id=work].windows[0].resets" hint-size="100%,26px"></dc-import>
         <dc-import name="WindowBar" label="Week" used-pct="46" pace-pct="52" resets="Thu 09:00" data-bind="label=accounts[id=work].windows[1].kind; usedPct=accounts[id=work].windows[1].usedPct; pacePct=accounts[id=work].windows[1].pacePct; resets=accounts[id=work].windows[1].resets" hint-size="100%,26px"></dc-import>
         <dc-import name="WindowBar" label="Week · Sonnet" used-pct="38" pace-pct="52" resets="Thu 09:00" data-bind="label=accounts[id=work].windows[2].kind; usedPct=accounts[id=work].windows[2].usedPct; pacePct=accounts[id=work].windows[2].pacePct; resets=accounts[id=work].windows[2].resets" hint-size="100%,26px"></dc-import>
       </dc-import>
+      </sc-if>
+      <sc-if value="{{showCodex}}" hint-placeholder-val="{{ true }}">
       <dc-import name="AccountCard" provider="codex" label="Personal" plan="Pro" status="ok" pinned="false" updated="4 min ago" data-bind="provider=accounts[id=personal].provider; label=accounts[id=personal].label; plan=accounts[id=personal].plan; status=accounts[id=personal].status; updated=accounts[id=personal].updated" hint-size="356px,200px">
         <dc-import name="WindowBar" label="5h" none="true" data-derive="shown when the snapshot has no fiveHour window" hint-size="100%,26px"></dc-import>
         <dc-import name="WindowBar" label="Week" used-pct="23" pace-pct="40" resets="Mon 14:30" data-bind="label=accounts[id=personal].windows[0].kind; usedPct=accounts[id=personal].windows[0].usedPct; pacePct=accounts[id=personal].windows[0].pacePct; resets=accounts[id=personal].windows[0].resets" hint-size="100%,26px"></dc-import>
       </dc-import>
+      </sc-if>
+      <sc-if value="{{showCodex}}" hint-placeholder-val="{{ true }}">
       <dc-import name="AccountCard" provider="codex" label="Team" plan="Plus" status="rateLimited" pinned="false" updated="1 min ago" data-bind="provider=accounts[id=team].provider; label=accounts[id=team].label; plan=accounts[id=team].plan; status=accounts[id=team].status; updated=accounts[id=team].updated" hint-size="356px,250px">
         <dc-import name="WindowBar" label="5h" used-pct="100" pace-pct="87" resets="in 38m" data-bind="label=accounts[id=team].windows[0].kind; usedPct=accounts[id=team].windows[0].usedPct; pacePct=accounts[id=team].windows[0].pacePct; resets=accounts[id=team].windows[0].resets" hint-size="100%,26px"></dc-import>
         <dc-import name="WindowBar" label="Week" used-pct="64" pace-pct="71" resets="Sat 18:00" data-bind="label=accounts[id=team].windows[1].kind; usedPct=accounts[id=team].windows[1].usedPct; pacePct=accounts[id=team].windows[1].pacePct; resets=accounts[id=team].windows[1].resets" hint-size="100%,26px"></dc-import>
       </dc-import>
+      </sc-if>
+      <sc-if value="{{showClaude}}" hint-placeholder-val="{{ true }}">
       <dc-import name="AccountCard" provider="claude" label="Side project" plan="Pro" status="needsLogin" pinned="false" updated="3h ago" data-bind="provider=accounts[id=side].provider; label=accounts[id=side].label; plan=accounts[id=side].plan; status=accounts[id=side].status; updated=accounts[id=side].updated" hint-size="356px,250px">
         <dc-import name="WindowBar" label="5h" used-pct="12" pace-pct="20" resets="in 4h 02m" dimmed="true" data-bind="label=accounts[id=side].windows[0].kind; usedPct=accounts[id=side].windows[0].usedPct; pacePct=accounts[id=side].windows[0].pacePct; resets=accounts[id=side].windows[0].resets" hint-size="100%,26px"></dc-import>
         <dc-import name="WindowBar" label="Week" used-pct="30" pace-pct="45" resets="Fri 11:00" dimmed="true" data-bind="label=accounts[id=side].windows[1].kind; usedPct=accounts[id=side].windows[1].usedPct; pacePct=accounts[id=side].windows[1].pacePct; resets=accounts[id=side].windows[1].resets" hint-size="100%,26px"></dc-import>
       </dc-import>
+      </sc-if>
     </div>
   </sc-if>
 </div>
 </x-dc>
-<script data-dc-script data-props='{"mode":{"editor":"enum","options":["accounts","empty"],"default":"accounts"},"theme":{"editor":"enum","options":["dark","light"],"default":"dark"}}'>
+<script data-dc-script data-props='{"mode":{"editor":"enum","options":["accounts","empty"],"default":"accounts"},"filter":{"editor":"enum","options":["all","claude","codex"],"default":"all"},"theme":{"editor":"enum","options":["dark","light"],"default":"dark"}}'>
 class Component extends DCLogic {
   renderVals() {
     const empty = (this.props.mode ?? 'accounts') === 'empty';
+    const filter = this.props.filter ?? 'all';
+    const tab = (id) => filter === id
+      ? { bg: 'var(--color-surface-2)', fg: 'var(--color-fg)' }
+      : { bg: 'transparent', fg: 'var(--color-muted)' };
+    const subtitles = { all: '4 accounts · 2 need attention', claude: '2 Claude accounts · 1 needs attention', codex: '2 Codex accounts · 1 needs attention' };
     return {
+      tabAll: tab('all'), tabClaude: tab('claude'), tabCodex: tab('codex'),
+      showClaude: filter !== 'codex',
+      showCodex: filter !== 'claude',
+      stripCols: filter === 'all' ? 2 : 1,
       isEmpty: empty,
       hasAccounts: !empty,
-      subtitle: empty ? 'No accounts yet' : '4 accounts · 2 need attention',
+      subtitle: empty ? 'No accounts yet' : subtitles[filter] ?? subtitles.all,
       themeClass: (this.props.theme ?? 'dark') === 'light' ? 'theme-light' : '',
     };
   }

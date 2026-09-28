@@ -1,0 +1,115 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+  <meta name="dc:title" content="Tray: macOS, Windows and Linux">
+  <meta name="dc:style" content="info">
+  <meta name="dc:frame" content="1600xauto">
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    .os { display: flex; flex-direction: column; gap: 14px; }
+    .stage { position: relative; height: 470px; border-radius: 12px; overflow: hidden; background: linear-gradient(160deg, #3b4252, #1f2430); }
+    .clip { position: absolute; width: 228px; height: 372px; overflow: hidden; border-radius: 10px; box-shadow: 0 16px 40px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.08); }
+    .clip > div { width: 380px; transform: scale(0.6); transform-origin: top left; }
+    .menu { position: absolute; display: flex; flex-direction: column; padding: 5px; border-radius: 8px; font: 13px/1 system-ui, sans-serif; }
+    .menu div { display: flex; gap: 8px; align-items: center; padding: 6px 10px; border-radius: 5px; white-space: nowrap; }
+    .menu hr { border: 0; height: 1px; margin: 4px 6px; }
+    .dim { opacity: .55; }
+  </style>
+</helmet>
+<div class="i-page">
+  <h1 class="i-title">How the tray looks on each OS</h1>
+  <p class="i-lead">Same tray code, three different surfaces. What each OS supports decides where the numbers can go: macOS and Linux show text next to the icon, Windows only the icon and a tooltip, and Linux gives no click events, so its menu has to carry the data.</p>
+  <div class="i-grid i-grid--3">
+    <div class="os">
+      <h2 class="i-h2">macOS · menu bar</h2>
+      <div class="stage">
+        <div style="position: absolute; top: 0; left: 0; right: 0; height: 26px; display: flex; align-items: center; justify-content: flex-end; gap: 14px; padding: 0 12px; background: rgba(30,32,40,.72); color: #f2f2f2; font: 500 13px/1 -apple-system, system-ui, sans-serif">
+          <div style="display: flex; align-items: center; gap: 5px; padding: 3px 6px; border-radius: 4px; background: rgba(255,255,255,.18)">
+            <svg width="15" height="15" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="2.4"></circle><circle cx="8" cy="8" r="6" fill="none" stroke="#f0776a" stroke-width="2.4" stroke-dasharray="30.9 37.7" transform="rotate(-90 8 8)" stroke-linecap="round"></circle></svg>
+            <span style="font-variant-numeric: tabular-nums">82% · 46%</span>
+          </div>
+          <span class="dim">Wi-Fi</span><span>Mon 28 Sep 14:32</span>
+        </div>
+        <div class="clip" style="top: 34px; left: 40px"><div><dc-import name="Panel" hint-size="380px,1090px"></dc-import></div></div>
+      </div>
+      <ul class="i-list">
+        <li><b>Left click</b> opens the panel right under the icon (positioner TrayCenter).</li>
+        <li><b>Title text</b> shows the pinned account: 5h · week. Starring another account switches it.</li>
+        <li><b>Right click</b> opens the native menu (below, shared with Linux).</li>
+      </ul>
+    </div>
+    <div class="os">
+      <h2 class="i-h2">Windows 11 · notification area</h2>
+      <div class="stage">
+        <div class="clip" style="bottom: 58px; right: 16px"><div><dc-import name="Panel" hint-size="380px,1090px"></dc-import></div></div>
+        <div style="position: absolute; bottom: 58px; right: 262px; padding: 8px 10px; border-radius: 6px; background: #2b2b2b; color: #f2f2f2; box-shadow: 0 0 0 1px rgba(255,255,255,.1); font: 12px/1.5 'Segoe UI', system-ui, sans-serif; white-space: pre-line">Usage Monitor
+Work: 82% · 46%
+Personal: — · 23%
+Team: 100% · 64%
+Side project: signed out</div>
+        <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 48px; display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 0 12px; background: rgba(28,28,30,.92); color: #f2f2f2; font: 12px/1.25 'Segoe UI', system-ui, sans-serif">
+          <span class="dim" style="font-size: 14px">⌃</span>
+          <div style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 4px; background: rgba(255,255,255,.1)">
+            <svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="2.4"></circle><circle cx="8" cy="8" r="6" fill="none" stroke="#f0776a" stroke-width="2.4" stroke-dasharray="30.9 37.7" transform="rotate(-90 8 8)" stroke-linecap="round"></circle></svg>
+          </div>
+          <span class="dim">Wi-Fi · Vol</span>
+          <div style="display: flex; flex-direction: column; align-items: flex-end"><span>14:32</span><span>28/09/2026</span></div>
+        </div>
+      </div>
+      <ul class="i-list">
+        <li><b>No text next to the icon</b>: set_title is a no-op on Windows, so the ring has to carry the amount and the tooltip the detail.</li>
+        <li>New icons land in the <b>hidden icons</b> overflow (⌃). The first run should tell the user to drag it onto the taskbar.</li>
+        <li>The tooltip holds 127 characters at most; past about five accounts it lists the pinned one and a count.</li>
+      </ul>
+    </div>
+    <div class="os">
+      <h2 class="i-h2">Linux · GNOME top bar (AppIndicator)</h2>
+      <div class="stage">
+        <div style="position: absolute; top: 0; left: 0; right: 0; height: 30px; display: flex; align-items: center; padding: 0 10px; background: #0b0b0c; color: #f2f2f2; font: 600 13px/1 Cantarell, Ubuntu, system-ui, sans-serif">
+          <span class="dim" style="flex: 1">Activities</span>
+          <span style="flex: 1; text-align: center">Sep 28 14:32</span>
+          <div style="flex: 1; display: flex; justify-content: flex-end; align-items: center; gap: 12px">
+            <div style="display: flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 12px; background: rgba(255,255,255,.16)">
+              <svg width="15" height="15" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="2.4"></circle><circle cx="8" cy="8" r="6" fill="none" stroke="#f0776a" stroke-width="2.4" stroke-dasharray="30.9 37.7" transform="rotate(-90 8 8)" stroke-linecap="round"></circle></svg>
+              <span>82% · 46%</span>
+            </div>
+            <span class="dim">⏻</span>
+          </div>
+        </div>
+        <div class="menu" style="top: 36px; right: 40px; width: 300px; background: #2e2e32; color: #f2f2f2; box-shadow: 0 12px 30px rgba(0,0,0,.5)">
+          <div class="dim" style="font-size: 11px; text-transform: uppercase; letter-spacing: .04em">Accounts</div>
+          <div><span style="width: 8px; height: 8px; border-radius: 50%; background: #f0776a"></span><span style="flex: 1">★ Work · Claude</span><span class="dim">82% · 46%</span></div>
+          <div><span style="width: 8px; height: 8px; border-radius: 50%; background: #5fd49a"></span><span style="flex: 1">Personal · Codex</span><span class="dim">— · 23%</span></div>
+          <div><span style="width: 8px; height: 8px; border-radius: 50%; background: #f0776a"></span><span style="flex: 1">Team · Codex</span><span class="dim">limited, back in 38m</span></div>
+          <div><span style="width: 8px; height: 8px; border-radius: 50%; background: #8b949e"></span><span style="flex: 1">Side project · Claude</span><span class="dim">signed out</span></div>
+          <hr style="background: rgba(255,255,255,.12)">
+          <div style="background: rgba(255,255,255,.1)">Open panel</div>
+          <div>Refresh all</div>
+          <hr style="background: rgba(255,255,255,.12)">
+          <div>Quit</div>
+        </div>
+      </div>
+      <ul class="i-list">
+        <li><b>No click events</b> on Linux: any click opens this menu, and Open panel places the window at the top-right corner.</li>
+        <li>That makes the menu the main surface here, so it lists every account with its numbers (proposal; today it only has Open, Refresh and Quit).</li>
+        <li>GNOME needs the AppIndicator extension (built into Ubuntu); KDE and most other desktops show it natively. The label may be hidden by some shells.</li>
+      </ul>
+    </div>
+  </div>
+  <h2 class="i-h2">Tray icon: from a colored dot to a ring gauge</h2>
+  <div class="i-grid i-grid--4">
+    <div class="i-card" style="display: flex; align-items: center; gap: 12px"><svg width="32" height="32" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="none" stroke="#d9d6cf" stroke-width="2.4"></circle><circle cx="8" cy="8" r="6" fill="none" stroke="#2ea36b" stroke-width="2.4" stroke-dasharray="8.7 37.7" transform="rotate(-90 8 8)" stroke-linecap="round"></circle></svg><span><b>23%</b><br><span class="i-muted">under 50%</span></span></div>
+    <div class="i-card" style="display: flex; align-items: center; gap: 12px"><svg width="32" height="32" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="none" stroke="#d9d6cf" stroke-width="2.4"></circle><circle cx="8" cy="8" r="6" fill="none" stroke="#c98a12" stroke-width="2.4" stroke-dasharray="24.1 37.7" transform="rotate(-90 8 8)" stroke-linecap="round"></circle></svg><span><b>64%</b><br><span class="i-muted">50–79%</span></span></div>
+    <div class="i-card" style="display: flex; align-items: center; gap: 12px"><svg width="32" height="32" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="none" stroke="#d9d6cf" stroke-width="2.4"></circle><circle cx="8" cy="8" r="6" fill="none" stroke="#d2463a" stroke-width="2.4" stroke-dasharray="37.7 37.7" transform="rotate(-90 8 8)"></circle></svg><span><b>100%</b><br><span class="i-muted">80% and up, or limited</span></span></div>
+    <div class="i-card" style="display: flex; align-items: center; gap: 12px"><svg width="32" height="32" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="none" stroke="#8b949e" stroke-width="2.4" stroke-dasharray="2.5 2.2"></circle></svg><span><b>No data</b><br><span class="i-muted">signed out, error, no CLI</span></span></div>
+  </div>
+  <div class="i-callout">Today the icon is a dot colored by the worst account, which says something is wrong but not how much, and on Windows that is all the user sees. The ring shows the pinned account's tightest window as an amount; the menu and tooltip cover the rest. Generated at runtime like today (icon_rgba), so it needs no assets.</div>
+</div>
+</x-dc>
+</body>
+</html>

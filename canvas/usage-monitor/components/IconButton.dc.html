@@ -11,11 +11,11 @@
   <dc-import name="Icon" glyph="{{glyph}}" size="16" hint-size="16px,16px"></dc-import>
 </div>
 </x-dc>
-<script data-dc-script data-props='{"glyph":{"editor":"enum","options":["gear","more","star","star-fill","refresh","close","back"],"default":"more"},"label":{"editor":"text","default":"More actions"},"active":{"editor":"boolean","default":false},"$preview":{"width":48,"height":48}}'>
+<script data-dc-script data-props='{"glyph":{"editor":"enum","options":["settings","ellipsis","star","star-fill","refresh-cw","x","chevron-left","list-filter"],"default":"ellipsis"},"label":{"editor":"text","default":"More actions"},"active":{"editor":"boolean","default":false},"$preview":{"width":48,"height":48}}'>
 class Component extends DCLogic {
   renderVals() {
     const active = String(this.props.active ?? 'false') === 'true';
-    const glyph = this.props.glyph ?? 'more';
+    const glyph = this.props.glyph ?? 'ellipsis';
     const starred = glyph === 'star-fill';
     return {
       glyph,

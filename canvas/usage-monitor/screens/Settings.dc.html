@@ -12,11 +12,11 @@
 <body>
 <x-dc>
 <helmet>
-  <style>body { margin: 0; color: var(--color-fg); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }</style>
+  <style>body { margin: 0; -webkit-font-smoothing: antialiased; }</style>
 </helmet>
 <div style="display: flex; flex-direction: column; width: 380px; min-height: 620px; background: var(--color-bg); padding-bottom: var(--space-4)">
   <div style="display: flex; align-items: center; gap: var(--space-2); padding: 14px var(--space-3) var(--space-3)">
-    <dc-import name="IconButton" glyph="back" label="Back" data-action="go:Panel" hint-size="28px,28px"></dc-import>
+    <dc-import name="IconButton" glyph="chevron-left" label="Back" data-action="go:Panel" hint-size="28px,28px"></dc-import>
     <span style="font: 600 var(--text-lg)/1.2 var(--font-sans); flex: 1">Settings</span>
   </div>
   <div style="display: flex; flex-direction: column; gap: 18px; padding: var(--space-1) var(--space-4) 0">
@@ -41,11 +41,11 @@
           <div style="display: flex; flex-wrap: wrap; gap: 6px; font: 500 var(--text-sm)/1 var(--font-mono)">
             <div style="display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 6px 0 10px; border-radius: var(--radius-pill); background: var(--color-warn-bg); color: var(--color-warn)">
               <span data-bind="settings.thresholds[0]">80%</span>
-              <dc-import name="Icon" glyph="close" size="12" data-action="do:remove this threshold" hint-size="12px,12px"></dc-import>
+              <dc-import name="Icon" glyph="x" size="12" data-action="do:remove this threshold" hint-size="12px,12px"></dc-import>
             </div>
             <div style="display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 6px 0 10px; border-radius: var(--radius-pill); background: var(--color-danger-bg); color: var(--color-danger)">
               <span data-bind="settings.thresholds[1]">95%</span>
-              <dc-import name="Icon" glyph="close" size="12" data-action="do:remove this threshold" hint-size="12px,12px"></dc-import>
+              <dc-import name="Icon" glyph="x" size="12" data-action="do:remove this threshold" hint-size="12px,12px"></dc-import>
             </div>
             <div data-action="do:turn the chip into a number input to add a threshold" style="display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 10px; border-radius: var(--radius-pill); border: 1px dashed var(--color-subtle); color: var(--color-muted); cursor: pointer">
               <dc-import name="Icon" glyph="plus" size="12" hint-size="12px,12px"></dc-import><span>Add</span>
