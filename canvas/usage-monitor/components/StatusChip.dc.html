@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+  <meta name="dc:behavior" content="Maps AccountStatus to a tone: ok → ok (dot only, used in the tray), stale and rateLimited → warn, needsLogin, cliMissing and error → danger, pending → neutral. The error message goes in the tooltip, not in the chip.">
+</head>
+<body>
+<x-dc>
+<div style="display: flex">
+  <div style="display: flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; border-radius: var(--radius-pill); background: {{bg}}; color: {{fg}}; font: 600 var(--text-xs)/1 var(--font-sans); white-space: nowrap">
+    <span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor"></span>
+    <span>{{label}}</span>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"status":{"editor":"enum","options":["ok","stale","rateLimited","needsLogin","cliMissing","error","pending"],"default":"rateLimited"},"$preview":{"width":140,"height":40}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const map = {
+      ok: ['Up to date', 'ok'],
+      stale: ['Stale', 'warn'],
+      rateLimited: ['Rate limited', 'warn'],
+      needsLogin: ['Signed out', 'danger'],
+      cliMissing: ['CLI not found', 'danger'],
+      error: ['Error', 'danger'],
+      pending: ['Waiting for first update', 'neutral'],
+    };
+    const [label, tone] = map[this.props.status ?? 'rateLimited'] ?? map.error;
+    return {
+      label,
+      bg: 'var(--color-' + tone + '-bg)',
+      fg: tone === 'neutral' ? 'var(--color-muted)' : 'var(--color-' + tone + ')',
+    };
+  }
+}
+</script>
+</body>
+</html>

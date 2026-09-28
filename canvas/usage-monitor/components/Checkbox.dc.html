@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+  <meta name="dc:behavior" content="The whole row is the hit target. Children are the label, so it can hold code.">
+</head>
+<body>
+<x-dc>
+<div style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font: 400 var(--text-md)/1.4 var(--font-sans); color: var(--color-fg)">
+  <div style="display: flex; align-items: center; justify-content: center; flex: none; width: 16px; height: 16px; margin-top: 1px; border-radius: 4px; border: 1.5px solid {{border}}; background: {{bg}}; color: var(--color-accent-fg); box-sizing: border-box">
+    <sc-if value="{{checked}}" hint-placeholder-val="{{ false }}"><dc-import name="Icon" glyph="check" size="12" hint-size="12px,12px"></dc-import></sc-if>
+  </div>
+  <div style="min-width: 0">{{children}}</div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"checked":{"editor":"boolean","default":false},"$preview":{"width":260,"height":40}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const checked = String(this.props.checked ?? 'false') === 'true';
+    return { checked, bg: checked ? 'var(--color-accent)' : 'transparent', border: checked ? 'var(--color-accent)' : 'var(--color-subtle)', children: this.props.children ?? 'Also sign out of the CLI' };
+  }
+}
+</script>
+</body>
+</html>

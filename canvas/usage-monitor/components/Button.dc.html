@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+  <meta name="dc:behavior" content="Disabled: 40% opacity, no hover, cursor not-allowed. Focus-visible: 2px accent ring. Height 32px, 28px when size is sm.">
+</head>
+<body>
+<x-dc>
+<div style="display: flex; align-items: center; justify-content: center; gap: 6px; height: {{height}}; padding: 0 {{pad}}; border-radius: var(--radius-sm); border: 1px solid {{border}}; background: {{bg}}; color: {{fg}}; font: 600 var(--text-md)/1 var(--font-sans); white-space: nowrap; opacity: {{opacity}}; cursor: pointer; box-sizing: border-box">
+  <sc-if value="{{hasIcon}}" hint-placeholder-val="{{ false }}"><dc-import name="Icon" glyph="{{icon}}" size="14" hint-size="14px,14px"></dc-import></sc-if>
+  <span>{{label}}</span>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"label":{"editor":"text","default":"Add account"},"variant":{"editor":"enum","options":["primary","secondary","ghost","danger"],"default":"primary"},"size":{"editor":"enum","options":["md","sm"],"default":"md"},"icon":{"editor":"text","default":""},"disabled":{"editor":"boolean","default":false},"$preview":{"width":160,"height":48}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const looks = {
+      primary: ['var(--color-accent)', 'var(--color-accent-fg)', 'var(--color-accent)'],
+      secondary: ['var(--color-surface-2)', 'var(--color-fg)', 'var(--color-border)'],
+      ghost: ['transparent', 'var(--color-muted)', 'transparent'],
+      danger: ['var(--color-danger)', 'var(--color-accent-fg)', 'var(--color-danger)'],
+    };
+    const [bg, fg, border] = looks[this.props.variant ?? 'primary'] ?? looks.primary;
+    const sm = (this.props.size ?? 'md') === 'sm';
+    const icon = this.props.icon ?? '';
+    return {
+      label: this.props.label ?? 'Add account', bg, fg, border, icon, hasIcon: icon !== '',
+      height: sm ? '28px' : '32px', pad: sm ? '10px' : '14px',
+      opacity: String(this.props.disabled ?? 'false') === 'true' ? '0.4' : '1',
+    };
+  }
+}
+</script>
+</body>
+</html>

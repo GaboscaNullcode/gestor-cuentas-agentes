@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+  <meta name="dc:title" content="UX audit: what changes and why">
+  <meta name="dc:style" content="info">
+  <meta name="dc:frame" content="1200xauto">
+</head>
+<body>
+<x-dc>
+<div class="i-page">
+  <h1 class="i-title">Usage Monitor redesign: what changes and why</h1>
+  <p class="i-lead">The panel answers one question in a glance: which account can I keep working on, and when does the blocked one come back. Today it shows the raw data but leaves that reading to the user.</p>
+  <h2 class="i-h2">Findings in the current UI</h2>
+  <table class="i-table">
+    <tr><th>Area</th><th>Today</th><th>Problem</th><th>Proposal</th></tr>
+    <tr><td>Panel</td><td>A list of equal cards</td><td>With 4+ accounts you scan every bar to decide where to switch.</td><td><b>Most headroom now</b> strip: the best account per provider and how much room it has.</td></tr>
+    <tr><td>Card actions</td><td>Four glyph buttons: ☆ ↻ ⌘ ✕</td><td>⌘ for copy alias is misleading, ✕ removes with one click away from the data, glyphs render differently per OS.</td><td>Star plus a more menu (Rename, Copy alias, Show folder, Remove). Refresh moves to the footer, next to Updated.</td></tr>
+    <tr><td>Status</td><td>Yellow or red text line; a loose Reconnect button</td><td>The problem and its fix read as two unrelated lines; the error text is long.</td><td>A tinted notice row: StatusChip, one short sentence, the fix button. Details in the tooltip.</td></tr>
+    <tr><td>Usage bars</td><td>Label, 8px bar, %, reset in four columns</td><td>A 92px label column squeezes the bar; nothing says if usage is ahead of time.</td><td>Label and reset on one line, % on the right in mono, full-width bar with a <b>pace tick</b>.</td></tr>
+    <tr><td>Remove</td><td>Inline confirm grows the card</td><td>The layout jumps; the delete-folder path wraps.</td><td>A bottom sheet with the consequences and a Remove and delete label that says what happens.</td></tr>
+    <tr><td>Add account</td><td>Import list, select, 3 text fields and a checkbox at the same level</td><td>The folder path is an expert detail shown as a primary field.</td><td>Provider tiles, one Name field, the folder under Advanced, a pinned primary button.</td></tr>
+    <tr><td>Sign-in</td><td>One line of text and a Cancel</td><td>No sense of progress; the code field appears out of nowhere.</td><td>Three explicit steps: opened, authorize (current), paste code.</td></tr>
+    <tr><td>Settings</td><td>Number input, comma list, raw paths, a Save button</td><td>Easy to type invalid values; changes lost without Save.</td><td>Interval segmented control, threshold chips, detected CLI rows, a toggle for aliases, autosave.</td></tr>
+  </table>
+  <h2 class="i-h2">The visual system</h2>
+  <div class="i-grid i-grid--3">
+    <div class="i-card">
+      <h3 class="i-h3">Dark first, both themes</h3>
+      <p class="i-muted">A tray utility is glanced at next to editors and terminals. Graphite neutrals with a slight cool tint; the light theme swaps only the neutrals and follows the OS.</p>
+    </div>
+    <div class="i-card">
+      <h3 class="i-h3">Geist and Geist Mono</h3>
+      <p class="i-muted">Mono with tabular numbers for every percentage and path, so values do not jitter when they update every few minutes.</p>
+    </div>
+    <div class="i-card">
+      <h3 class="i-h3">Color means level, nothing else</h3>
+      <p class="i-muted">Green, amber and red share lightness and chroma in oklch. Providers get a quiet tint on a generic mark, never a competing color.</p>
+    </div>
+  </div>
+  <h2 class="i-h2">How to read a usage bar</h2>
+  <div class="i-flow">
+    <div class="i-box"><b>Fill</b><span class="i-small i-muted">% of the window used, colored by level</span></div>
+    <div class="i-box i-box--accent"><b>Pace tick</b><span class="i-small i-muted">% of the window's time already elapsed</span></div>
+    <div class="i-box"><b>Fill past the tick</b><span class="i-small i-muted">you will hit the limit before the reset at this rate</span></div>
+  </div>
+  <div class="i-callout">The window stays 380×620: the header and the Most headroom strip stay fixed and the cards scroll under them, so the answer to where to switch is always visible.</div>
+</div>
+</x-dc>
+</body>
+</html>

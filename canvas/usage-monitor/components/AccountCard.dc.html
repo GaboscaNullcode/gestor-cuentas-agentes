@@ -1,0 +1,80 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+  <meta name="dc:behavior" content="Children are the WindowBar rows. Clicking the name starts an inline rename (Enter saves, Escape cancels, max 40 chars). The star pins the account to the tray. The more button opens AccountMenu. When status is not ok, a notice row appears under the header with the fix: Reconnect for needsLogin, stale and error; Set CLI path for cliMissing; nothing for rateLimited (it only shows when the limit lifts). Refresh in the footer spins its icon while the request runs.">
+</head>
+<body>
+<x-dc>
+<div style="display: flex; flex-direction: column; gap: var(--space-3); padding: 14px; border-radius: var(--radius-lg); background: var(--color-surface); border: 1px solid var(--color-border); font-family: var(--font-sans); color: var(--color-fg)">
+  <div style="display: flex; align-items: center; gap: 10px">
+    <dc-import name="ProviderMark" provider="{{provider}}" hint-size="28px,28px"></dc-import>
+    <div style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0">
+      <div style="display: flex; align-items: center; gap: 6px; min-width: 0">
+        <span title="Rename" style="font: 600 var(--text-lg)/1.2 var(--font-sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: text">{{label}}</span>
+        <span style="font: 500 var(--text-xs)/1 var(--font-sans); color: var(--color-muted); padding: 3px 6px; border-radius: var(--radius-pill); background: var(--color-surface-2)">{{plan}}</span>
+      </div>
+      <span style="font: 400 var(--text-xs)/1.2 var(--font-sans); color: var(--color-subtle)">{{providerName}}</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 2px">
+      <dc-import name="IconButton" glyph="{{starGlyph}}" label="{{starLabel}}" data-action="do:toggle whether this account shows in the tray" hint-size="28px,28px"></dc-import>
+      <dc-import name="IconButton" glyph="more" label="More actions" data-action="open:AccountMenu" hint-size="28px,28px"></dc-import>
+    </div>
+  </div>
+  <sc-if value="{{hasNotice}}" hint-placeholder-val="{{ false }}">
+    <div style="display: flex; align-items: center; gap: var(--space-2); padding: 8px 8px 8px 10px; border-radius: var(--radius-md); background: {{noticeBg}}">
+      <dc-import name="StatusChip" status="{{status}}" hint-size="100px,22px"></dc-import>
+      <span style="flex: 1; font: 400 var(--text-xs)/1.3 var(--font-sans); color: var(--color-muted)">{{noticeText}}</span>
+      <sc-if value="{{canReconnect}}" hint-placeholder-val="{{ false }}">
+        <dc-import name="Button" variant="secondary" size="sm" label="Reconnect" data-action="go:SignIn" hint-size="90px,28px"></dc-import>
+      </sc-if>
+      <sc-if value="{{canSetPath}}" hint-placeholder-val="{{ false }}">
+        <dc-import name="Button" variant="secondary" size="sm" label="Set path" data-action="go:Settings" hint-size="80px,28px"></dc-import>
+      </sc-if>
+    </div>
+  </sc-if>
+  <div style="display: flex; flex-direction: column; gap: var(--space-3)">{{children}}</div>
+  <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 10px; border-top: 1px solid var(--color-border); font: 400 var(--text-xs)/1 var(--font-sans); color: var(--color-subtle)">
+    <span>Updated {{updated}}</span>
+    <div data-action="do:refresh this account now" style="display: flex; align-items: center; gap: 4px; color: var(--color-muted); cursor: pointer">
+      <dc-import name="Icon" glyph="refresh" size="13" hint-size="13px,13px"></dc-import>
+      <span>Refresh</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"provider":{"editor":"enum","options":["claude","codex"],"default":"claude"},"label":{"editor":"text","default":"Work"},"plan":{"editor":"text","default":"Max"},"status":{"editor":"enum","options":["ok","stale","rateLimited","needsLogin","cliMissing","error"],"default":"ok"},"pinned":{"editor":"boolean","default":true},"updated":{"editor":"text","default":"2 min ago"},"$preview":{"width":356,"height":220}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const provider = this.props.provider ?? 'claude';
+    const status = this.props.status ?? 'ok';
+    const pinned = String(this.props.pinned ?? 'true') === 'true';
+    const notices = {
+      stale: ['Showing the last good reading.', 'Reconnect', 'warn'],
+      rateLimited: ['Limit reached. Usage resumes at the next reset.', '', 'warn'],
+      needsLogin: ['The CLI session expired.', 'Reconnect', 'danger'],
+      cliMissing: ['The CLI could not be found.', 'Set path', 'danger'],
+      error: ['The last update failed.', 'Reconnect', 'danger'],
+    };
+    const n = notices[status];
+    return {
+      provider, status,
+      providerName: provider === 'claude' ? 'Claude' : 'Codex',
+      label: this.props.label ?? 'Work',
+      plan: this.props.plan ?? 'Max',
+      updated: this.props.updated ?? '2 min ago',
+      starGlyph: pinned ? 'star-fill' : 'star',
+      starLabel: pinned ? 'Shown in tray' : 'Show in tray',
+      hasNotice: Boolean(n),
+      noticeText: n ? n[0] : '',
+      canReconnect: Boolean(n && n[1] === 'Reconnect'),
+      canSetPath: status === 'cliMissing',
+      noticeBg: n ? 'var(--color-' + n[2] + '-bg)' : 'transparent',
+      children: this.props.children,
+    };
+  }
+}
+</script>
+</body>
+</html>

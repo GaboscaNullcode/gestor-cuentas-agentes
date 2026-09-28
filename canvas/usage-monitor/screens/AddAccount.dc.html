@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+  <meta name="dc:title" content="Add account">
+  <meta name="dc:route" content="add">
+  <meta name="dc:states" content="no detected sessions: hide the Found on this computer section entirely; error: an inline message under the field that caused it, or above the footer">
+  <meta name="dc:behavior" content="The folder path is proposed from provider and name until the user edits it (proposeConfigDir). Advanced starts collapsed and shows the proposed path as a summary line. With Already signed in checked, the footer button reads Add account and skips sign-in. The footer stays pinned to the bottom of the window.">
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>body { margin: 0; color: var(--color-fg); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }</style>
+</helmet>
+<div style="display: flex; flex-direction: column; width: 380px; height: 620px; background: var(--color-bg)">
+  <div style="display: flex; align-items: center; gap: var(--space-2); padding: 14px var(--space-3) var(--space-3)">
+    <dc-import name="IconButton" glyph="back" label="Back" data-action="go:Panel" hint-size="28px,28px"></dc-import>
+    <span style="font: 600 var(--text-lg)/1.2 var(--font-sans)">Add account</span>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 18px; flex: 1; padding: var(--space-2) var(--space-4) 0">
+    <div style="display: flex; flex-direction: column; gap: var(--space-2)">
+      <span style="font: 600 var(--text-xs)/1 var(--font-sans); color: var(--color-subtle); letter-spacing: 0.04em; text-transform: uppercase">Found on this computer</span>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 12px; border-radius: var(--radius-md); background: var(--color-surface); border: 1px solid var(--color-border)">
+        <dc-import name="ProviderMark" provider="claude" data-bind="provider=detected[0].provider" hint-size="28px,28px"></dc-import>
+        <div style="display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0">
+          <span style="font: 500 var(--text-md)/1.2 var(--font-sans)">Claude · signed in</span>
+          <span data-bind="detected[0].configDir" style="font: 400 var(--text-xs)/1.2 var(--font-mono); color: var(--color-subtle)">~/.claude</span>
+        </div>
+        <dc-import name="Button" variant="secondary" size="sm" label="Import" data-action="do:import this session as an account named Main, then return to the panel" hint-size="64px,28px"></dc-import>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: var(--space-3)">
+      <span style="font: 600 var(--text-xs)/1 var(--font-sans); color: var(--color-subtle); letter-spacing: 0.04em; text-transform: uppercase">New account</span>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2)">
+        <div data-action="do:select Claude as provider" style="display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 12px; border-radius: var(--radius-md); background: var(--color-surface); border: 1.5px solid var(--color-accent); cursor: pointer">
+          <dc-import name="ProviderMark" provider="claude" hint-size="28px,28px"></dc-import>
+          <span style="font: 600 var(--text-md)/1 var(--font-sans)">Claude</span>
+        </div>
+        <div data-action="do:select Codex as provider" style="display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 12px; border-radius: var(--radius-md); background: var(--color-surface); border: 1.5px solid var(--color-border); color: var(--color-muted); cursor: pointer">
+          <dc-import name="ProviderMark" provider="codex" hint-size="28px,28px"></dc-import>
+          <span style="font: 600 var(--text-md)/1 var(--font-sans)">Codex</span>
+        </div>
+      </div>
+      <label style="display: flex; flex-direction: column; gap: 6px; font: 500 var(--text-sm)/1 var(--font-sans); color: var(--color-muted)">
+        Name
+        <div style="display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: var(--radius-sm); background: var(--color-surface); border: 1.5px solid var(--color-accent); font: 400 var(--text-md)/1 var(--font-sans); color: var(--color-fg)">Research</div>
+        <span style="font: 400 var(--text-xs)/1.3 var(--font-sans); color: var(--color-subtle)">Shown on the card and used for the shell alias claude-research.</span>
+      </label>
+      <div style="display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: var(--radius-md); background: var(--color-surface); border: 1px solid var(--color-border)">
+        <div data-action="do:expand the advanced options" style="display: flex; align-items: center; gap: var(--space-2); cursor: pointer">
+          <span style="font: 500 var(--text-sm)/1 var(--font-sans); flex: 1">Advanced</span>
+          <span style="font: 400 var(--text-xs)/1 var(--font-sans); color: var(--color-subtle)">Hide</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: var(--space-2); height: 32px; padding: 0 10px; border-radius: var(--radius-sm); background: var(--color-bg); border: 1px solid var(--color-border); color: var(--color-muted)">
+          <dc-import name="Icon" glyph="folder" size="14" hint-size="14px,14px"></dc-import>
+          <span data-bind="proposedDir" style="flex: 1; font: 400 var(--text-sm)/1 var(--font-mono); color: var(--color-fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">~/.usage-monitor/claude/research</span>
+        </div>
+        <dc-import name="Checkbox" checked="false" hint-size="100%,20px">This folder is already signed in</dc-import>
+      </div>
+    </div>
+  </div>
+  <div style="display: flex; flex-direction: column; padding: var(--space-3) var(--space-4) var(--space-4); border-top: 1px solid var(--color-border)">
+    <dc-import name="Button" variant="primary" label="Continue to sign in" data-action="go:SignIn" hint-size="100%,32px"></dc-import>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

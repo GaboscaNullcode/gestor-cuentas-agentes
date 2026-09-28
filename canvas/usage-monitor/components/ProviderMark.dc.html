@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+  <meta name="dc:behavior" content="Generic marks, not vendor logos: a spark for Claude, a prompt for Codex. The tile tints with the provider color at 14% and draws the glyph at full strength.">
+</head>
+<body>
+<x-dc>
+<div title="{{name}}" style="display: flex; align-items: center; justify-content: center; width: {{box}}; height: {{box}}; border-radius: 8px; background: color-mix(in oklch, {{color}} 16%, transparent); color: {{color}}">
+  <svg width="{{glyphSize}}" height="{{glyphSize}}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: block"><path d="{{d}}"></path></svg>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"provider":{"editor":"enum","options":["claude","codex"],"default":"claude"},"size":{"editor":"enum","options":["md","lg"],"default":"md"},"$preview":{"width":56,"height":56}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const provider = this.props.provider ?? 'claude';
+    const lg = (this.props.size ?? 'md') === 'lg';
+    return {
+      name: provider === 'claude' ? 'Claude' : 'Codex',
+      color: provider === 'claude' ? 'var(--color-claude)' : 'var(--color-codex)',
+      d: provider === 'claude' ? 'M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4' : 'M5 8l4 4-4 4M12 17h7',
+      box: lg ? '36px' : '28px',
+      glyphSize: lg ? '18' : '15',
+    };
+  }
+}
+</script>
+</body>
+</html>

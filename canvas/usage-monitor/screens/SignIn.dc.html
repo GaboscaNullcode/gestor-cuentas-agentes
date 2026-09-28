@@ -1,0 +1,61 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+  <meta name="dc:title" content="Sign in">
+  <meta name="dc:route" content="login">
+  <meta name="dc:states" content="waiting: step 2 is current and the code step is hidden until login-progress reports needsCode; failed: the current step turns danger with the error and the footer shows Try again and Back; success: returns to the panel and the new card flashes its border once">
+  <meta name="dc:behavior" content="Driven by the login-progress and login-finished events. The spinner on the current step rotates continuously. Submit is disabled until the code field has text; Enter submits. Cancel calls cancelLogin and returns to the panel.">
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>body { margin: 0; color: var(--color-fg); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }</style>
+</helmet>
+<div style="display: flex; flex-direction: column; width: 380px; height: 620px; background: var(--color-bg)">
+  <div style="display: flex; flex-direction: column; align-items: center; gap: var(--space-3); padding: 40px var(--space-5) var(--space-5); text-align: center">
+    <dc-import name="ProviderMark" provider="claude" size="lg" hint-size="36px,36px"></dc-import>
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <span style="font: 600 var(--text-xl)/1.2 var(--font-sans)">Sign in to Claude</span>
+      <span style="font: 400 var(--text-md)/1.4 var(--font-sans); color: var(--color-muted)">for the account Research</span>
+    </div>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 0; flex: 1; padding: 0 var(--space-5)">
+    <div style="display: flex; gap: var(--space-3); padding-bottom: 18px">
+      <div style="display: flex; align-items: center; justify-content: center; flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--color-ok-bg); color: var(--color-ok)">
+        <dc-import name="Icon" glyph="check" size="13" hint-size="13px,13px"></dc-import>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px; padding-top: 3px">
+        <span style="font: 500 var(--text-md)/1.2 var(--font-sans); color: var(--color-muted)">Opened the sign-in page in your browser</span>
+      </div>
+    </div>
+    <div style="display: flex; gap: var(--space-3); padding-bottom: 18px">
+      <div style="flex: none; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--color-track); border-top-color: var(--color-accent); box-sizing: border-box"></div>
+      <div style="display: flex; flex-direction: column; gap: 6px; padding-top: 3px">
+        <span style="font: 600 var(--text-md)/1.2 var(--font-sans)">Authorize Usage Monitor there</span>
+        <span style="font: 400 var(--text-sm)/1.4 var(--font-sans); color: var(--color-muted)">This window updates by itself when you finish.</span>
+        <div data-action="do:open the sign-in URL from login-progress in the default browser" style="display: flex; align-items: center; gap: 6px; font: 500 var(--text-sm)/1 var(--font-sans); color: var(--color-accent); cursor: pointer">
+          <span>Open the page again</span>
+          <dc-import name="Icon" glyph="external" size="13" hint-size="13px,13px"></dc-import>
+        </div>
+      </div>
+    </div>
+    <div style="display: flex; gap: var(--space-3)">
+      <div style="display: flex; align-items: center; justify-content: center; flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--color-surface-2); font: 600 var(--text-xs)/1 var(--font-mono); color: var(--color-muted)">3</div>
+      <div style="display: flex; flex-direction: column; gap: var(--space-2); flex: 1; padding-top: 3px">
+        <span style="font: 500 var(--text-md)/1.2 var(--font-sans)">Paste the code the browser shows</span>
+        <div style="display: flex; gap: var(--space-2)">
+          <div style="display: flex; align-items: center; flex: 1; height: 32px; padding: 0 10px; border-radius: var(--radius-sm); background: var(--color-surface); border: 1px solid var(--color-border); font: 400 var(--text-sm)/1 var(--font-mono); color: var(--color-subtle)">Code</div>
+          <dc-import name="Button" variant="primary" label="Submit" disabled="true" data-action="do:submit the code with submitLoginCode" hint-size="76px,32px"></dc-import>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="display: flex; justify-content: center; padding: var(--space-4)">
+    <dc-import name="Button" variant="ghost" label="Cancel" data-action="go:Panel" hint-size="80px,32px"></dc-import>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

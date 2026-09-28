@@ -1,0 +1,26 @@
+{
+  "title": "Usage Monitor",
+  "styles": ["styles/tokens.css"],
+  "data": "data/usage.json",
+  "frame": "380x620",
+  "flows": [
+    { "id": "add-account", "name": "Add and sign in to an account", "scale": 0.75, "steps": [
+      { "artboard": "Panel--empty", "note": "First run: an empty state that explains the app and offers one action." },
+      { "artboard": "AddAccount", "via": "go:AddAccount", "note": "Import a detected session in one click, or name a new one. The folder hides under Advanced." },
+      { "artboard": "SignIn", "via": "go:SignIn", "note": "Three steps show progress; the code step only appears when the CLI asks for it." }
+    ] },
+    { "id": "remove-account", "name": "Remove an account", "scale": 0.75, "steps": [
+      { "artboard": "Panel", "note": "Destructive actions live behind the more button, not on the card." },
+      { "artboard": "Panel", "overlay": "AccountMenu", "via": "open:AccountMenu", "note": "Rename, copy the alias, open the folder or remove." },
+      { "artboard": "Panel", "overlay": "RemoveAccount", "via": "open:RemoveAccount", "note": "A sheet states what will happen before anything is deleted." }
+    ] },
+    { "id": "reconnect", "name": "Fix a signed-out account", "scale": 0.75, "steps": [
+      { "artboard": "Panel", "note": "The notice row pairs the problem with its fix." },
+      { "artboard": "SignIn", "via": "go:SignIn", "note": "Reconnect reuses the sign-in steps for the same folder." }
+    ] }
+  ],
+  "notes": [
+    { "near": "Panel", "text": "Real window is 380×620 and the list scrolls under the header; the frame shows the full list. The pace tick is the thin mark on each bar." }
+  ],
+  "launch": "page:screens"
+}

@@ -1,0 +1,41 @@
+{
+  "accounts": [
+    {
+      "id": "work", "provider": "claude", "label": "Work", "plan": "Max", "pinned": true,
+      "aliasName": "claude-work", "status": "ok", "updated": "2 min ago",
+      "windows": [
+        { "kind": "5h", "usedPct": 82, "resets": "in 1h 12m", "pacePct": 76 },
+        { "kind": "Week", "usedPct": 46, "resets": "Thu 09:00", "pacePct": 52 },
+        { "kind": "Week · Sonnet", "usedPct": 38, "resets": "Thu 09:00", "pacePct": 52 }
+      ]
+    },
+    {
+      "id": "personal", "provider": "codex", "label": "Personal", "plan": "Pro", "pinned": false,
+      "aliasName": "codex-personal", "status": "ok", "updated": "4 min ago",
+      "windows": [
+        { "kind": "Week", "usedPct": 23, "resets": "Mon 14:30", "pacePct": 40 }
+      ]
+    },
+    {
+      "id": "team", "provider": "codex", "label": "Team", "plan": "Plus", "pinned": false,
+      "aliasName": "codex-team", "status": "rateLimited", "updated": "1 min ago",
+      "windows": [
+        { "kind": "5h", "usedPct": 100, "resets": "in 38m", "pacePct": 87 },
+        { "kind": "Week", "usedPct": 64, "resets": "Sat 18:00", "pacePct": 71 }
+      ]
+    },
+    {
+      "id": "side", "provider": "claude", "label": "Side project", "plan": "Pro", "pinned": false,
+      "aliasName": "claude-side-project", "status": "needsLogin", "updated": "3h ago",
+      "windows": [
+        { "kind": "5h", "usedPct": 12, "resets": "in 4h 02m", "pacePct": 20 },
+        { "kind": "Week", "usedPct": 30, "resets": "Fri 11:00", "pacePct": 45 }
+      ]
+    }
+  ],
+  "detected": [
+    { "provider": "claude", "configDir": "~/.claude" }
+  ],
+  "proposedDir": "~/.usage-monitor/claude/research",
+  "settings": { "intervalMinutes": 5, "thresholds": [80, 95], "claudePath": "/opt/homebrew/bin/claude", "codexPath": "/opt/homebrew/bin/codex", "launchAtLogin": true, "aliasTargets": "~/.zshrc" }
+}

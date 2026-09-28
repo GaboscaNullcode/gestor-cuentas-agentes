@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+  <meta name="dc:behavior" content="Every icon button carries an aria-label and a tooltip with its action. Hover: surface-2 background, fg color. Focus-visible: 2px accent ring.">
+</head>
+<body>
+<x-dc>
+<div title="{{label}}" style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: var(--radius-sm); background: {{bg}}; color: {{fg}}; cursor: pointer">
+  <dc-import name="Icon" glyph="{{glyph}}" size="16" hint-size="16px,16px"></dc-import>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"glyph":{"editor":"enum","options":["gear","more","star","star-fill","refresh","close","back"],"default":"more"},"label":{"editor":"text","default":"More actions"},"active":{"editor":"boolean","default":false},"$preview":{"width":48,"height":48}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const active = String(this.props.active ?? 'false') === 'true';
+    const glyph = this.props.glyph ?? 'more';
+    const starred = glyph === 'star-fill';
+    return {
+      glyph,
+      label: this.props.label ?? 'More actions',
+      bg: active ? 'var(--color-surface-2)' : 'transparent',
+      fg: starred ? 'var(--color-warn)' : active ? 'var(--color-fg)' : 'var(--color-muted)',
+    };
+  }
+}
+</script>
+</body>
+</html>

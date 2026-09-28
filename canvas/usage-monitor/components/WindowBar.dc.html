@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+  <meta name="dc:behavior" content="Fill color by level: under 50% ok, 50–79% warn, 80% and up danger; the percentage text takes the danger color at 80% and up. The pace tick marks how much of the window has elapsed (100 − minutes to reset / window length); a fill past the tick means usage runs ahead of time. Tooltip on the tick: Pace: 76% of the window elapsed. Once resetsAt has passed, show 0% and Resetting. Dimmed (status not ok): 45% opacity. The fill animates its width over 400ms when a new snapshot arrives.">
+</head>
+<body>
+<x-dc>
+<div style="display: flex; flex-direction: column; gap: 6px; opacity: {{opacity}}">
+  <div style="display: flex; align-items: baseline; gap: var(--space-2); font-family: var(--font-sans)">
+    <span style="font: 500 var(--text-sm)/1.2 var(--font-sans); color: var(--color-fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{label}}</span>
+    <span style="font: 400 var(--text-xs)/1.2 var(--font-sans); color: var(--color-subtle); white-space: nowrap; flex: 1">{{resetText}}</span>
+    <span style="font: 600 var(--text-md)/1 var(--font-mono); color: {{pctColor}}; font-variant-numeric: tabular-nums">{{pctText}}</span>
+  </div>
+  <div style="position: relative; height: 6px; border-radius: var(--radius-pill); background: {{track}}">
+    <div style="position: absolute; left: 0; top: 0; bottom: 0; width: {{fillWidth}}; border-radius: var(--radius-pill); background: {{fill}}"></div>
+    <sc-if value="{{showPace}}" hint-placeholder-val="{{ true }}">
+      <div title="Pace" style="position: absolute; top: -3px; left: {{paceLeft}}; width: 2px; height: 12px; border-radius: 1px; background: var(--color-fg); opacity: 0.55"></div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"label":{"editor":"text","default":"5h"},"usedPct":{"editor":"int","default":82,"min":0,"max":100},"pacePct":{"editor":"int","default":76,"min":0,"max":100},"resets":{"editor":"text","default":"in 1h 12m"},"dimmed":{"editor":"boolean","default":false},"none":{"editor":"boolean","default":false},"$preview":{"width":320,"height":56}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const none = String(this.props.none ?? 'false') === 'true';
+    const pct = Math.max(0, Math.min(100, Number(this.props.usedPct ?? 82)));
+    const pace = Number(this.props.pacePct ?? 76);
+    const level = pct >= 80 ? 'danger' : pct >= 50 ? 'warn' : 'ok';
+    return {
+      label: this.props.label ?? '5h',
+      resetText: none ? 'No 5h limit on this plan' : 'resets ' + (this.props.resets ?? 'in 1h 12m'),
+      pctText: none ? '—' : pct + '%',
+      pctColor: none ? 'var(--color-subtle)' : level === 'danger' ? 'var(--color-danger)' : 'var(--color-fg)',
+      fill: 'var(--color-' + level + ')',
+      fillWidth: none ? '0%' : pct + '%',
+      track: none ? 'repeating-linear-gradient(90deg, var(--color-track) 0 4px, transparent 4px 8px)' : 'var(--color-track)',
+      showPace: !none,
+      paceLeft: 'calc(' + pace + '% - 1px)',
+      opacity: String(this.props.dimmed ?? 'false') === 'true' ? '0.45' : '1',
+    };
+  }
+}
+</script>
+</body>
+</html>

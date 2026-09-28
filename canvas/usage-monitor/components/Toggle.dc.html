@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+  <meta name="dc:behavior" content="A switch (role=switch, aria-checked). The knob slides over 150ms. Space and Enter toggle it.">
+</head>
+<body>
+<x-dc>
+<div style="display: flex">
+  <div style="position: relative; width: 32px; height: 18px; border-radius: var(--radius-pill); background: {{track}}; cursor: pointer">
+    <div style="position: absolute; top: 2px; left: {{knobLeft}}; width: 14px; height: 14px; border-radius: 50%; background: {{knob}}"></div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"on":{"editor":"boolean","default":true},"$preview":{"width":64,"height":40}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const on = String(this.props.on ?? 'true') === 'true';
+    return { track: on ? 'var(--color-accent)' : 'var(--color-track)', knob: on ? 'var(--color-accent-fg)' : 'var(--color-muted)', knobLeft: on ? '16px' : '2px' };
+  }
+}
+</script>
+</body>
+</html>
