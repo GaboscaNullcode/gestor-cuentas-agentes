@@ -48,7 +48,8 @@
   font-family: var(--font-sans);
   font-size: var(--text-md);
   color: var(--color-fg);
-  background: var(--color-bg);
+  /* Transparent so only #root paints: the window corners stay see-through. */
+  background: transparent;
   -webkit-font-smoothing: antialiased;
 }
 
