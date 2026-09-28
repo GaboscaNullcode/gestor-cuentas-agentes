@@ -19,7 +19,8 @@ pub fn window_name(kind: &WindowKind) -> String {
     }
 }
 
-fn until(at: DateTime<Utc>, now: DateTime<Utc>) -> String {
+/// Time left until `at` in compact form: `38m`, `2h 5m` or `3d 4h`.
+pub fn until(at: DateTime<Utc>, now: DateTime<Utc>) -> String {
     let minutes = (at - now).num_minutes().max(0);
     if minutes < 60 {
         format!("{minutes}m")

@@ -12,6 +12,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_autostart::ManagerExt;
+use tauri_plugin_opener::OpenerExt;
 
 type CmdResult<T> = Result<T, String>;
 
@@ -218,6 +219,25 @@ pub async fn remove_account(app: AppHandle, id: String, logout: bool, delete_dir
     state.save_cache();
     accounts_changed(&app);
     Ok(())
+}
+
+/// Shows the account's config directory in the OS file manager.
+#[tauri::command]
+pub fn open_config_dir(app: AppHandle, state: State<'_, AppState>, id: String) -> CmdResult<()> {
+    let dir = state
+        .accounts
+        .lock()
+        .unwrap()
+        .iter()
+        .find(|a| a.id == id)
+        .map(|a| a.config_dir.clone())
+        .ok_or("Account not found")?;
+    if !dir.is_dir() {
+        return Err(format!("{} does not exist.", dir.display()));
+    }
+    app.opener()
+        .open_path(dir.to_string_lossy(), None::<&str>)
+        .map_err(|e| format!("Could not open {}: {e}", dir.display()))
 }
 
 #[derive(serde::Serialize)]

@@ -61,6 +61,7 @@ pub fn run() {
             commands::submit_login_code,
             commands::cancel_login,
             commands::remove_account,
+            commands::open_config_dir,
             commands::alias_line,
             commands::aliases_status,
             commands::install_aliases,
