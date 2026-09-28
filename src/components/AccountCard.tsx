@@ -1,29 +1,53 @@
-import { useRef, useState } from "react";
-import { formatAgo, planLabel, providerName, statusLabel } from "../format";
+// Canvas: canvas/usage-monitor/components/AccountCard.dc.html
+import { Ellipsis, RefreshCw, Star } from "lucide-react";
+import { useCallback, useRef, useState } from "react";
+import { formatAgo, planLabel, providerName } from "../format";
 import type { AccountStatus, AccountView, UsageSnapshot } from "../types";
-import { WindowBar } from "./WindowBar";
+import { AccountMenu } from "./AccountMenu";
+import { Button } from "./Button";
+import { IconButton } from "./IconButton";
+import { ProviderMark } from "./ProviderMark";
+import { RemoveAccountSheet } from "./RemoveAccountSheet";
+import { StatusChip, statusTone } from "./StatusChip";
+import { NoFiveHourBar, SkeletonBar, WindowBar } from "./WindowBar";
 
 // Statuses where signing in again may fix the account; not ok, rate limited or a missing CLI.
 const RECONNECTABLE: AccountStatus["type"][] = ["needsLogin", "stale", "error"];
+
+const NOTICES: Record<Exclude<AccountStatus["type"], "ok">, string> = {
+  stale: "Showing the last good reading.",
+  rateLimited: "Limit reached. Usage resumes at the next reset.",
+  needsLogin: "The CLI session expired.",
+  cliMissing: "The CLI could not be found.",
+  error: "The last update failed.",
+};
 
 interface Props {
   account: AccountView;
   snapshot: UsageSnapshot | undefined;
   now: Date;
+  /** Flashes the border once, after the account was just signed in. */
+  flash: boolean;
   onPin: () => void;
   onRename: (label: string) => void;
-  onRefresh: () => void;
+  /** Async actions report their own failures; the card only waits for them to settle. */
+  onRefresh: () => Promise<unknown>;
   onReconnect: () => void;
-  onRemove: (logout: boolean, deleteDir: boolean) => void;
-  onCopyAlias: () => void;
+  onRemove: (logout: boolean, deleteDir: boolean) => Promise<unknown>;
+  /** Resolves true once the alias line is on the clipboard. */
+  onCopyAlias: () => Promise<boolean>;
+  onShowFolder: () => void;
   onOpenSettings: () => void;
 }
 
-export function AccountCard({ account, snapshot, now, onPin, onRename, onRefresh, onReconnect, onRemove, onCopyAlias, onOpenSettings }: Props) {
+export function AccountCard(props: Props) {
+  const { account, snapshot, now, flash, onPin, onRename, onRefresh, onReconnect, onRemove, onCopyAlias, onShowFolder, onOpenSettings } =
+    props;
+  const [menuOpen, setMenuOpen] = useState(false);
   const [removing, setRemoving] = useState(false);
-  const [logout, setLogout] = useState(false);
-  const [deleteDir, setDeleteDir] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [draft, setDraft] = useState<string | null>(null);
+  const moreButton = useRef<HTMLButtonElement>(null);
   // Enter/Escape unmount the input, which can also fire blur; this makes the edit end once.
   const editing = useRef(false);
   const startRename = () => {
@@ -37,90 +61,144 @@ export function AccountCard({ account, snapshot, now, onPin, onRename, onRefresh
     if (save && next && next !== account.label) onRename(next);
     setDraft(null);
   };
-  const label = snapshot ? statusLabel(snapshot.status) : "Waiting for first update";
-  const status = snapshot?.status.type === "error" ? `${label}: ${snapshot.status.message}` : label;
-  const dimmed = snapshot !== undefined && snapshot.status.type !== "ok";
-  const canReconnect = snapshot !== undefined && RECONNECTABLE.includes(snapshot.status.type);
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+  const cancelRemove = useCallback(() => {
+    setRemoving(false);
+    moreButton.current?.focus();
+  }, []);
+
+  async function refresh() {
+    setRefreshing(true);
+    await onRefresh();
+    setRefreshing(false);
+  }
+
+  const status = snapshot?.status.type;
+  // A rate-limited reading is current, so it stays at full strength; other problems mean stale numbers.
+  const dimmed = status !== undefined && status !== "ok" && status !== "rateLimited";
+  const canReconnect = status !== undefined && RECONNECTABLE.includes(status);
   const hasFiveHour = snapshot?.windows.some((w) => w.kind.type === "fiveHour") ?? false;
+  const errorDetail = snapshot?.status.type === "error" ? snapshot.status.message : (snapshot?.lastError ?? undefined);
+
   return (
-    <section className="card">
+    <section className={`card ${flash ? "flash" : ""}`} aria-label={account.label}>
       <header className="card-header">
-        <div>
-          <span className={`provider ${account.provider}`}>{providerName(account.provider)}</span>
-          {draft === null ? (
-            <strong className="account-name" title="Rename" onClick={startRename}>
-              {account.label}
-            </strong>
-          ) : (
-            <input
-              className="rename"
-              autoFocus
-              maxLength={40}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onBlur={() => endRename(true)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") endRename(true);
-                if (e.key === "Escape") endRename(false);
-              }}
-            />
-          )}
-          {snapshot?.plan && <span className="plan">{planLabel(snapshot.plan)}</span>}
+        <ProviderMark provider={account.provider} />
+        <div className="card-title">
+          <div className="card-name-row">
+            {draft === null ? (
+              <button type="button" className="card-name" title="Rename" onClick={startRename}>
+                {account.label}
+              </button>
+            ) : (
+              <input
+                className="card-rename"
+                aria-label="Account name"
+                autoFocus
+                maxLength={40}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onBlur={() => endRename(true)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") endRename(true);
+                  if (e.key === "Escape") endRename(false);
+                }}
+              />
+            )}
+            {snapshot?.plan && <span className="plan-pill">{planLabel(snapshot.plan)}</span>}
+          </div>
+          <span className="card-provider">{providerName(account.provider)}</span>
         </div>
         <div className="card-actions">
-          <button title={account.pinned ? "Shown in tray" : "Show in tray"} onClick={onPin}>
-            {account.pinned ? "★" : "☆"}
-          </button>
-          <button title="Refresh" onClick={onRefresh}>
-            ↻
-          </button>
-          <button title={`Copy alias ${account.aliasName}`} onClick={onCopyAlias}>
-            ⌘
-          </button>
-          <button title="Remove" onClick={() => setRemoving(true)}>
-            ✕
-          </button>
+          <IconButton
+            icon={Star}
+            filled={account.pinned}
+            label={account.pinned ? "Shown in tray" : "Show in tray"}
+            aria-pressed={account.pinned}
+            onClick={onPin}
+          />
+          <IconButton
+            ref={moreButton}
+            icon={Ellipsis}
+            label="More actions"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            active={menuOpen}
+            onClick={() => setMenuOpen((open) => !open)}
+          />
         </div>
       </header>
-      {status && (
-        <p className={`status ${snapshot?.status.type ?? "pending"}`} title={snapshot?.lastError ?? undefined}>
-          {status}
-        </p>
+      {snapshot === undefined && (
+        <div className="notice">
+          <StatusChip status="pending" />
+        </div>
       )}
-      {snapshot?.status.type === "cliMissing" && <button onClick={onOpenSettings}>Set CLI path</button>}
-      {canReconnect && <button onClick={onReconnect}>Reconnect</button>}
-      {removing && (
-        <div className="confirm">
-          <p>Remove {account.label} from Usage Monitor?</p>
-          <label className="checkbox">
-            <input type="checkbox" checked={logout} onChange={(e) => setLogout(e.target.checked)} />
-            Also sign out of the CLI
-          </label>
-          {account.canDeleteDir && (
-            <label className="checkbox">
-              <input type="checkbox" checked={deleteDir} onChange={(e) => setDeleteDir(e.target.checked)} />
-              Also delete <code>{account.configDir}</code>
-            </label>
+      {status !== undefined && status !== "ok" && (
+        <div className={`notice ${statusTone(status)}`} title={errorDetail}>
+          <StatusChip status={status} />
+          <span className="notice-text">{NOTICES[status]}</span>
+          {canReconnect && (
+            <Button variant="secondary" size="sm" onClick={onReconnect}>
+              Reconnect
+            </Button>
           )}
-          <div className="card-actions">
-            <button onClick={() => onRemove(logout, account.canDeleteDir && deleteDir)}>Remove</button>
-            <button onClick={() => setRemoving(false)}>Cancel</button>
-          </div>
+          {status === "cliMissing" && (
+            <Button variant="secondary" size="sm" onClick={onOpenSettings}>
+              Set path
+            </Button>
+          )}
+        </div>
+      )}
+      {snapshot === undefined && (
+        <div className="card-bars">
+          <SkeletonBar />
+          <SkeletonBar />
         </div>
       )}
       {snapshot && snapshot.windows.length > 0 && (
-        <>
-          {!hasFiveHour && (
-            <div className="bar-row muted">
-              <span className="bar-label">5h</span>
-              <span>No 5h limit</span>
-            </div>
-          )}
+        <div className="card-bars">
+          {!hasFiveHour && <NoFiveHourBar dimmed={dimmed} />}
           {snapshot.windows.map((w, i) => (
             <WindowBar key={i} window={w} now={now} dimmed={dimmed} />
           ))}
-          <p className="updated">Updated {formatAgo(snapshot.fetchedAt, now)}</p>
-        </>
+        </div>
+      )}
+      <footer className="card-footer">
+        <span>{snapshot ? `Updated ${formatAgo(snapshot.fetchedAt, now)}` : ""}</span>
+        <button type="button" className="link-btn" disabled={refreshing} onClick={refresh}>
+          <RefreshCw size={13} className={refreshing ? "spin" : ""} aria-hidden="true" />
+          <span>Refresh</span>
+        </button>
+      </footer>
+      {menuOpen && (
+        <AccountMenu
+          anchor={moreButton}
+          aliasName={account.aliasName}
+          onClose={closeMenu}
+          onRename={() => {
+            closeMenu();
+            startRename();
+          }}
+          onCopyAlias={onCopyAlias}
+          onShowFolder={() => {
+            closeMenu();
+            onShowFolder();
+          }}
+          onRemove={() => {
+            closeMenu();
+            setRemoving(true);
+          }}
+        />
+      )}
+      {removing && (
+        <RemoveAccountSheet
+          account={account}
+          onCancel={cancelRemove}
+          onRemove={async (logout, deleteDir) => {
+            await onRemove(logout, deleteDir);
+            setRemoving(false);
+          }}
+        />
       )}
     </section>
   );

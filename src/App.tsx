@@ -3,11 +3,14 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "./api";
 import { AccountCard } from "./components/AccountCard";
 import { AddAccountView } from "./components/AddAccountView";
-import { LoginView } from "./components/LoginView";
+import { LoginView, type LoginTarget } from "./components/LoginView";
+import { PanelView } from "./components/PanelView";
 import { SettingsView } from "./components/SettingsView";
 import type { AccountView, UsageSnapshot, UsageUpdated } from "./types";
 
-type View = { name: "panel" } | { name: "add" } | { name: "settings" } | { name: "login"; title: string; start: () => Promise<unknown> };
+type View = { name: "panel" } | { name: "add" } | { name: "settings" } | ({ name: "login" } & LoginTarget);
+
+const FLASH_MS = 1500;
 
 export default function App() {
   const [accounts, setAccounts] = useState<AccountView[]>([]);
@@ -15,7 +18,12 @@ export default function App() {
   const [view, setView] = useState<View>({ name: "panel" });
   const [now, setNow] = useState(new Date());
   const [error, setError] = useState<string | null>(null);
+  const [flashId, setFlashId] = useState<string | null>(null);
   const toPanel = useCallback(() => setView({ name: "panel" }), []);
+  const signedIn = useCallback((accountId: string) => {
+    setFlashId(accountId);
+    setView({ name: "panel" });
+  }, []);
 
   const reload = useCallback(async () => {
     setAccounts(await api.listAccounts());
@@ -36,48 +44,78 @@ export default function App() {
     };
   }, [reload]);
 
-  const run = (action: Promise<unknown>) => action.catch((e) => setError(String(e)));
+  useEffect(() => {
+    if (!flashId) return;
+    const timer = setTimeout(() => setFlashId(null), FLASH_MS);
+    return () => clearTimeout(timer);
+  }, [flashId]);
+
+  /** Runs a backend action, surfaces its failure in the banner and resolves whether it succeeded. */
+  const run = (action: Promise<unknown>): Promise<boolean> =>
+    action.then(
+      () => true,
+      (e) => {
+        setError(String(e));
+        return false;
+      },
+    );
   const ordered = [...accounts].sort(
     (a, b) => Number(b.pinned) - Number(a.pinned) || a.createdAt.localeCompare(b.createdAt),
   );
 
   if (view.name === "add")
-    return <AddAccountView onDone={toPanel} onStartLogin={(title, start) => setView({ name: "login", title, start })} />;
-  if (view.name === "login") return <LoginView title={view.title} start={view.start} onDone={toPanel} />;
+    return (
+      <AddAccountView
+        aliasNames={accounts.map((a) => a.aliasName)}
+        onDone={toPanel}
+        onStartLogin={(target) => setView({ name: "login", ...target })}
+      />
+    );
+  if (view.name === "login")
+    return (
+      <LoginView
+        provider={view.provider}
+        accountLabel={view.accountLabel}
+        start={view.start}
+        onSuccess={signedIn}
+        onDone={toPanel}
+      />
+    );
   if (view.name === "settings") return <SettingsView onDone={toPanel} />;
 
   return (
-    <main className="panel">
-      <header className="panel-header">
-        <h1>Usage</h1>
-        <div className="card-actions">
-          <button title="Settings" onClick={() => setView({ name: "settings" })}>
-            ⚙
-          </button>
-          <button onClick={() => setView({ name: "add" })}>+ Add account</button>
-        </div>
-      </header>
-      {error && (
-        <p className="error" onClick={() => setError(null)}>
-          {error}
-        </p>
-      )}
-      {ordered.length === 0 && <p className="muted">No accounts yet. Add one to start tracking usage.</p>}
-      {ordered.map((account) => (
+    <PanelView
+      accounts={ordered}
+      snapshots={snapshots}
+      now={now}
+      error={error}
+      onDismissError={() => setError(null)}
+      onAdd={() => setView({ name: "add" })}
+      onOpenSettings={() => setView({ name: "settings" })}
+      renderCard={(account) => (
         <AccountCard
           key={account.id}
           account={account}
           snapshot={snapshots[account.id]}
           now={now}
+          flash={account.id === flashId}
           onPin={() => run(api.setPinned(account.id))}
           onRename={(label) => run(api.renameAccount(account.id, label))}
           onRefresh={() => run(api.refreshAccount(account.id))}
-          onReconnect={() => setView({ name: "login", title: `Reconnect ${account.label}`, start: () => api.reconnect(account.id) })}
+          onReconnect={() =>
+            setView({
+              name: "login",
+              provider: account.provider,
+              accountLabel: account.label,
+              start: () => api.reconnect(account.id),
+            })
+          }
           onRemove={(logout, deleteDir) => run(api.removeAccount(account.id, logout, deleteDir))}
           onCopyAlias={() => run(api.aliasLine(account.id).then((line) => navigator.clipboard.writeText(line)))}
+          onShowFolder={() => run(api.openConfigDir(account.id))}
           onOpenSettings={() => setView({ name: "settings" })}
         />
-      ))}
-    </main>
+      )}
+    />
   );
 }

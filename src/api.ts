@@ -19,6 +19,7 @@ export const api = {
   removeAccount: (id: string, logout: boolean, deleteDir: boolean) =>
     invoke<void>("remove_account", { id, logout, deleteDir }),
   aliasLine: (id: string) => invoke<string>("alias_line", { id }),
+  openConfigDir: (id: string) => invoke<void>("open_config_dir", { id }),
   aliasesStatus: () => invoke<AliasStatus>("aliases_status"),
   installAliases: () => invoke<AliasStatus>("install_aliases"),
   uninstallAliases: () => invoke<AliasStatus>("uninstall_aliases"),
