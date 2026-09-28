@@ -240,7 +240,6 @@ If a file is ever corrupted, it is moved aside as `*.json.corrupt` instead of be
 - **Anthropic's terms** forbid third-party tools from handling claude.ai credentials. This app avoids that by only running the unmodified official CLI, but polling usage is not explicitly covered by any policy. Don't set very short intervals.
 - **Codex Pro** plans currently have no 5-hour window; the card shows "No 5h limit".
 - **Codex installed inside WSL** on Windows is not supported.
-- When Claude reports its limit with the wording "usage limit reached", the card may show a generic error instead of "Rate limited".
 - The Windows-specific code (PowerShell aliases, process cleanup) has not yet been exercised on a Windows machine.
 - No usage history or charts, no API-key accounts, no sync between computers, no signed installers or auto-update.
 

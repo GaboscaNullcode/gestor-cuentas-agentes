@@ -42,7 +42,9 @@ async fn auth_status(ctx: &CliContext, account: &Account) -> Option<ClaudeAuthSt
 
 const AUTH_HINTS: [&str; 10] =
     ["not logged in", "log in", "login", "sign in", "expired", "invalid", "revoked", "unauthorized", "401", "oauth"];
-const RATE_LIMIT_HINTS: [&str; 4] = ["rate limit", "rate_limit", "429", "too many requests"];
+// The first three are specific enough to trust in stderr; the rest only in synthetic messages.
+const RATE_LIMIT_HINTS: [&str; 6] =
+    ["rate limit", "rate_limit", "429", "too many requests", "usage limit", "hit your limit"];
 const MAX_ERROR_CHARS: usize = 300;
 
 fn contains_any(text: &str, needles: &[&str]) -> bool {
@@ -152,7 +154,14 @@ mod tests {
 
     #[test]
     fn synthetic_rate_limit_messages_mean_rate_limited() {
-        for text in ["Claude usage rate limit reached", "API Error: 429", "rate_limit_error", "Too Many Requests"] {
+        for text in [
+            "Claude usage rate limit reached",
+            "API Error: 429",
+            "rate_limit_error",
+            "Too Many Requests",
+            "Claude AI usage limit reached|1759075200",
+            "You've hit your limit · resets 3pm",
+        ] {
             let snap = classify_missing_report(Some(&logged_in()), &synthetic(text));
             assert_eq!(snap.status, AccountStatus::RateLimited, "{text}");
         }
