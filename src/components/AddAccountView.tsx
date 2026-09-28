@@ -82,7 +82,7 @@ export function AddAccountView({ onDone, onStartLogin }: Props) {
         </label>
         <label>
           Label
-          <input placeholder="Personal" value={label} onChange={(e) => setLabel(e.target.value)} />
+          <input placeholder="e.g. Personal" value={label} onChange={(e) => setLabel(e.target.value)} />
         </label>
         <label>
           Config directory

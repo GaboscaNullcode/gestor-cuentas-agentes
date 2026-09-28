@@ -11,7 +11,10 @@
 body { margin: 0; background: var(--bg); }
 button { font: inherit; color: var(--fg); background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; cursor: pointer; }
 button:hover { border-color: var(--accent); }
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+button:disabled:hover { border-color: var(--border); }
 input, select { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 4px 6px; }
+input::placeholder { color: var(--muted); opacity: 0.6; font-style: italic; }
 code { font-size: 11px; color: var(--muted); word-break: break-all; }
 .panel, .view { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
 .panel-header, .view-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
